@@ -1,0 +1,9 @@
+Algorithm,Accuracy (%),Precision,Recall,F1-Score,Train Time (sec),Model Size Joblib (KB),Model Size PKL (KB),File Key,Is Best Model
+Random Forest,95.21,0.9602,0.9521,0.9526,0.1763,1366.24,1356.63,random_forest,YES
+Extra Trees,94.95,0.9573,0.9495,0.9498,0.1332,1642.44,1632.92,extra_trees,NO
+XGBoost,93.35,0.9358,0.9335,0.9338,0.8216,509.63,509.63,xgboost,NO
+LightGBM,94.88,0.9563,0.9488,0.9492,0.1021,813.79,813.6,lightgbm,NO
+Gradient Boosting,94.75,0.9531,0.9475,0.9479,1.7316,1324.21,998.3,gradient_boosting,NO
+K-Nearest Neighbors,93.95,0.9437,0.9395,0.94,0.0527,299.87,205.18,k_nearest_neighbors,NO
+Decision Tree,94.88,0.9559,0.9488,0.9493,0.0107,10.3,9.73,decision_tree,NO
+Support Vector Machine,92.69,0.9336,0.9269,0.926,0.6647,74.39,51.36,support_vector_machine,NO

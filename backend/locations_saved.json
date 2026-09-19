@@ -1,0 +1,19 @@
+[
+  {
+    "id": "site-1789790724230",
+    "name": "Titik Jelajah GenZ (-7.9405, 112.6345)",
+    "keterangan": "testing",
+    "lat": -7.9405,
+    "lng": 112.6345,
+    "tds": 120.0,
+    "turbidity": 1.2,
+    "assScore": 71.4,
+    "category": "Sangat Rendah (Aman)",
+    "riskLevel": "low",
+    "timestamp": "Baru saja (Ditandai)",
+    "method": "Pin Manual Peta (Grab Style)",
+    "device": "aquasentry-esp32-01",
+    "advice": "Kondisi air aman. Disarankan merebus sebelum dikonsumsi.",
+    "notes": "Lokasi pengujian baru ditandai dari Telemetri Sensor (120 mg/L, 1.2 NTU)."
+  }
+]
