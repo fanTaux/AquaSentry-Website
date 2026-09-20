@@ -2,6 +2,7 @@ import { useState } from 'react';
 import TopNavBar from './components/TopNavBar';
 import SensorErrorBanner from './components/SensorErrorBanner';
 import DashboardMetrics from './components/DashboardMetrics';
+import LocationMap from './components/LocationMap';
 import Login from './components/Login';
 import SettingsPage from './components/SettingsPage';
 import ProfilePage from './components/ProfilePage';
@@ -26,17 +27,24 @@ function MainApp() {
       <TopNavBar onLogout={logout} onProfileClick={() => setActiveTab('profile')} />
 
       <div className="pt-20 px-margin max-w-7xl mx-auto mb-6">
-        <div className="flex justify-between items-center bg-aqua-surface p-1.5 rounded-full border border-aqua-secondary/30 shadow-sm max-w-sm mx-auto">
+        <div className="flex justify-between items-center bg-aqua-surface p-1.5 rounded-full border border-aqua-secondary/30 shadow-sm max-w-md mx-auto">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${activeTab === 'dashboard' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'dashboard' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
           >
             <span className="material-symbols-outlined text-[18px]">water_drop</span>
             Monitoring
           </button>
           <button
+            onClick={() => setActiveTab('map')}
+            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'map' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">map</span>
+            Peta Lokasi
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
-            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
           >
             <span className="material-symbols-outlined text-[18px]">settings</span>
             Settings
@@ -83,6 +91,10 @@ function MainApp() {
 
             <DashboardMetrics />
           </div>
+        )}
+
+        {activeTab === 'map' && (
+          <LocationMap />
         )}
 
         {activeTab === 'settings' && (

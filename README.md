@@ -1,137 +1,88 @@
-# 💧 AquaSentry
+# 💧 AquaSentry: End-to-End IoT & Edge AI Water Safety Screening System
 
-**Alat skrining dini kualitas air portabel berbasis IoT & AI**, dirancang untuk pekerja lapangan (pekerja hutan, pekerja tambang) dan petualang outdoor yang sering mengandalkan sumber air yang belum diketahui kualitasnya — mata air, sungai, tandon umum, atau penampungan di lokasi transit.
+**Alat skrining dini kualitas air portabel berbasis IoT & Edge AI**, dirancang untuk pekerja lapangan (hutan, tambang, bencana) dan petualang outdoor yang mengandalkan sumber air yang belum diketahui kualitasnya — mata air, sungai, atau penampungan air di lokasi transit.
 
-Repo ini berisi **frontend/dashboard** AquaSentry — bagian backend & firmware ESP32 dikembangkan terpisah.
-
----
-
-## 🌊 Tentang AquaSentry
-
-Air terlihat jernih bukan berarti aman digunakan. Di lapangan, pengujian laboratorium tidak praktis dibawa — berukuran besar, mahal, dan prosesnya tidak instan. AquaSentry hadir sebagai jalan tengah: perangkat kecil berbasis **ESP32** dengan dua sensor utama, **TDS** (Total Dissolved Solids) dan **turbidity** (kekeruhan), yang mengubah pembacaan sensor menjadi skor risiko yang mudah dipahami — **AquaSentry Risk Score (ARS)**.
-
-ARS dihitung dari normalisasi TDS & turbidity terhadap ambang batas WHO dan Peraturan Menteri Kesehatan RI, lalu diklasifikasikan lewat model machine learning (ensemble tree-based) ke empat kategori risiko:
-
-| Kategori | Warna | Arti |
-|---|---|---|
-| 🟢 Low Risk | Hijau | Relatif aman untuk kebutuhan dasar |
-| 🟡 Moderate Risk | Kuning | Gunakan dengan hati-hati |
-| 🟠 High Risk | Oranye | Tidak disarankan tanpa penanganan lebih lanjut |
-| 🔴 Very High Risk | Merah | Sebaiknya dihindari |
-
-⚠️ **Penting:** AquaSentry adalah alat **skrining dini (triase)**, bukan pengganti pengujian laboratorium atau penentu kelayakan air minum secara mutlak — parameter yang diukur bersifat fisika-kimia dan belum mencakup aspek mikrobiologi.
+Proyek ini mencakup seluruh ekosistem **AquaSentry**:
+1. 🌐 **Frontend React Web App** (`my-react-app/`)
+2. ⚡ **Backend FastAPI Service** (`backend/`)
+3. 🤖 **Machine Learning Training & Visualizations** (`training/` & `data/`)
+4. 📡 **Firmware Mikrokontroler ESP32 & TinyML Engine** (`esp32/`)
+5. 🛠️ **Perekam Serial & Utility Tools** (`tools/`)
 
 ---
 
-## 🏆 Latar Belakang Lomba
+## 🌊 Arsitektur & Fitur Utama
 
-AquaSentry dikembangkan untuk **ITCC (Information Technology Creative Competition) 2026** — kompetisi Internet of Things yang diselenggarakan oleh **Himpunan Mahasiswa Teknologi Informasi (HMTI), Fakultas Teknik, Universitas Udayana**.
-
-- 🎯 **Tema besar:** *Empowering Society Through Smart and Sustainable IoT Innovations*
-- 📌 **Subtema:** Smart Health & Accessible Care
-- 🧭 **Fokus solusi:** mendekatkan pemantauan kualitas air dasar ke masyarakat/pekerja yang secara struktural tidak punya akses ke fasilitas pengujian air
-
-Repo ini adalah bagian dari purwarupa yang diajukan tim untuk babak seleksi hingga final ITCC 2026.
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Teknologi |
-|---|---|
-| Framework | [React 19](https://react.dev/) |
-| Build tool | [Vite](https://vite.dev/) |
-| Styling | [Tailwind CSS 3](https://tailwindcss.com/) + PostCSS/Autoprefixer |
-| Ikon | [Material Symbols Outlined](https://fonts.google.com/icons) |
-| Font | Plus Jakarta Sans (Google Fonts) |
-| State management | React Context API (`AppContext.jsx`) |
-| Linting | oxlint |
-
-> 🧪 **Mode saat ini: Demo/Mock.** Dashboard menampilkan data sensor simulasi (bukan koneksi live ke perangkat), karena backend & firmware ESP32 AquaSentry masih dalam pengembangan terpisah. Titik integrasi ada di satu file: `src/context/AppContext.jsx` — ganti fungsi `buildReading()` di sana dengan pemanggilan API/WebSocket asli begitu backend siap; komponen lain tidak perlu disentuh.
-
-### ✂️ Fitur yang sengaja tidak ada
-
-Repo ini adalah hasil adaptasi dari proyek IoT sebelumnya (FungiGuard). Fitur kontrol aktuator (kontrol lampu, master power, penjadwalan otomatis) **sengaja dihapus** karena AquaSentry adalah perangkat baca-saja (skrining pasif), bukan alat yang mengendalikan perangkat lain.
+- **Dual-Mode System**:
+  - **Mode Offline (Standalone Edge AI)**: ESP32 melakukan klasifikasi inferensi lokal di dalam chip ($\approx 0{,}0001\text{ ms}$) menggunakan header `aquasentry_model.h` (Decision Tree Pruned) dan langsung mengendalikan lampu **RGB LED Fisik** (`Hijau` / `Kuning` / `Merah`).
+  - **Mode Online (Web Dashboard Sync)**: Ketika terhubung Wi-Fi, data telemetri $5\text{ Hz}$ dikirim ke FastAPI Backend dan disajikan pada React Dashboard.
+- **3 Kategori Risiko Air (3 Risk Labels)**:
+  - 🟢 **Low Risk** (Hijau): Air relatif aman untuk kebutuhan dasar.
+  - 🟡 **Moderate Risk** (Kuning): Air mendekati ambang batas, gunakan dengan hati-hati.
+  - 🔴 **High Risk** (Merah): Air berisiko tinggi melebihi ambang batas baku mutu.
 
 ---
 
-## 🚀 Cara Menjalankan (Replikasi Lokal)
+## 📁 Struktur Repository Modular
 
-### Prasyarat
-- [Node.js](https://nodejs.org/) versi 18 ke atas
-- npm (terpasang otomatis bersama Node.js)
+```
+AquaSentry-Website/
+├── my-react-app/            # 🌐 Dashboard Web App (React 19, Vite, Tailwind CSS)
+├── backend/                 # ⚡ Backend API Engine (FastAPI, Python)
+│   ├── app/
+│   │   ├── routes/          # REST Endpoints (telemetry, wifi, locations, health)
+│   │   ├── services/        # Logic (telemetry, location, wifi)
+│   │   └── models/          # Pydantic Schemas
+│   └── app.py
+├── esp32/                   # 📡 Firmware C++ & TinyML Header (ESP32)
+│   ├── aquasentry_model.h   # C++ Native Decision Tree Model (< 2 KB)
+│   ├── Dummy_aquasentry_esp32/
+│   └── aquasentry_esp32/
+├── training/                # 🤖 Pipeline Benchmark 8 Model ML & Visualisasi
+│   ├── model/               # Model Terlatih (.joblib & .pkl)
+│   ├── results/             # Tabel Evaluasi & Confusion Matrix Grid
+│   ├── Request_Gambar_Alvin/# Visualisasi Gambar High-Res 300 DPI
+│   └── src/                 # Script Training, Evaluator, & C++ Exporter
+├── data/                    # 📊 Master Dataset & Rekaman Sensor Serial
+│   ├── data_alvin.csv       # Dataset Utama 7.520 Sampel (3 Label)
+│   └── recordings/          # Berkas Rekaman CSV Real Sensor
+├── tools/                   # 🛠️ Utility Scripts
+│   ├── record_sensor_serial.py
+│   └── generate_data_alvin.py
+├── aquasentry_core.py       # Core Python Inference & Scoring Engine
+├── model_aquasentry_alvin.joblib # Master Trained Model (Random Forest 95.21%)
+└── README.md
+```
 
-### Langkah-langkah
+---
 
+## 🏆 ITCC 2026
+
+Dikembangkan untuk **Information Technology Creative Competition (ITCC) 2026** — Fakultas Teknik, Universitas Udayana. Subtema: **Smart Health & Accessible Care**.
+
+---
+
+## 🚀 Cara Menjalankan
+
+### 1. Frontend Dashboard (React)
 ```bash
-# 1. Clone repo ini
-git clone https://github.com/fanTaux/AquaSentry-Website.git
-cd AquaSentry-Website
-
-# 2. Masuk ke folder project React (bukan di root repo!)
 cd my-react-app
-
-# 3. Install dependency
 npm install
-
-# 4. Jalankan mode development
 npm run dev
 ```
 
-Buka URL yang muncul di terminal (biasanya `http://localhost:5173`). Login menggunakan username/password apa saja — ini mode demo, tidak ada autentikasi ke server manapun.
-
-### Build untuk produksi
-
+### 2. Backend API (FastAPI)
 ```bash
-npm run build
+pip install -r backend/requirements.txt
+python backend/app.py
 ```
 
-Hasil build statis akan ada di folder `my-react-app/dist/` — folder ini yang di-deploy ke hosting statis (Vercel, Netlify, GitHub Pages, dll).
-
----
-
-## 📁 Struktur Folder Penting
-
+### 3. Perekam Data Serial ESP32 (Port COM20)
+```bash
+python tools/record_sensor_serial.py COM20
 ```
-my-react-app/
-├── public/
-│   └── favicon.svg          # Ikon tab browser
-├── src/
-│   ├── components/
-│   │   ├── DashboardMetrics.jsx   # Tampilan utama: ARS gauge, TDS/turbidity, riwayat
-│   │   ├── AlertHistory.jsx       # Riwayat peringatan risiko tinggi
-│   │   ├── SettingsPage.jsx       # Manajemen pengguna & perangkat
-│   │   ├── TopNavBar.jsx          # Navigasi atas + notifikasi
-│   │   ├── Login.jsx              # Halaman login (mode demo)
-│   │   └── ProfilePage.jsx        # Profil pengguna
-│   ├── context/
-│   │   └── AppContext.jsx    # 🔌 Sumber data — titik integrasi backend nanti
-│   └── index.css             # Entry point Tailwind
-├── tailwind.config.js        # Design system / warna AquaSentry
-└── vite.config.js
-```
-
----
-
-## 🎨 Design System
-
-| Warna | Hex | Fungsi |
-|---|---|---|
-| Primary Ocean Blue | `#0077B6` | Header, tombol utama |
-| Secondary Aqua Blue | `#48CAE4` | Aksen, tombol sekunder |
-| Success Emerald Green | `#2DC653` | Status air aman |
-| Warning Amber | `#F4A261` | Status perlu waspada |
-| Danger Coral Red | `#E63946` | Status berbahaya |
-| Background Ice White | `#F8FCFD` | Latar aplikasi |
 
 ---
 
 ## 👥 Tim
-
-Dikembangkan untuk ITCC 2026 — HMTI Universitas Udayana.
-
----
-
-## 📄 Lisensi
-
-Belum ditentukan — tambahkan lisensi sesuai kebutuhan tim sebelum repo bersifat publik permanen.
+Dikembangkan untuk ITCC 2026 — Universitas Udayana.
