@@ -54,10 +54,10 @@ bool isApModeActive           = false;
 String savedSsid              = "";
 String savedPassword          = "";
 
-// Variabel Intervensi Sensor (HIL Software-in-the-Loop Simulation)
+// Variabel Simulasi Data Sensor
 bool overrideSensorActive     = true;   // Default aktif agar AI langsung jalan tanpa sensor fisik rusak
-float injectedTdsPpm          = 85.0f;  // Nilai dasar TDS
-float injectedTurbNtu         = 15.0f;  // Nilai dasar Turbidity
+float simTdsPpm          = 85.0f;  // Nilai dasar TDS
+float simTurbNtu         = 15.0f;  // Nilai dasar Turbidity
 String currentPresetName      = "LOW";  // Preset aktif
 
 // Buffer Jendela 5 Detik & Variabel Edge AI
@@ -344,22 +344,22 @@ void handleTcpCommunication() {
 
     if (cmd == "SET_PRESET:LOW") {
       overrideSensorActive = true;
-      injectedTdsPpm = 85.0f;
-      injectedTurbNtu = 15.0f;
+      simTdsPpm = 85.0f;
+      simTurbNtu = 15.0f;
       currentPresetName = "LOW";
       Serial.println("\n[PRESET DIUBAH] -> LOW (TDS ~85 PPM, Turb ~15 NTU)");
     } 
     else if (cmd == "SET_PRESET:MEDIUM") {
       overrideSensorActive = true;
-      injectedTdsPpm = 245.0f;
-      injectedTurbNtu = 215.0f;
+      simTdsPpm = 245.0f;
+      simTurbNtu = 215.0f;
       currentPresetName = "MEDIUM";
       Serial.println("\n[PRESET DIUBAH] -> MEDIUM (TDS ~245 PPM, Turb ~215 NTU)");
     } 
     else if (cmd == "SET_PRESET:HIGH") {
       overrideSensorActive = true;
-      injectedTdsPpm = 480.0f;
-      injectedTurbNtu = 450.0f;
+      simTdsPpm = 480.0f;
+      simTurbNtu = 450.0f;
       currentPresetName = "HIGH";
       Serial.println("\n[PRESET DIUBAH] -> HIGH (TDS ~480 PPM, Turb ~450 NTU)");
     }
@@ -369,11 +369,11 @@ void handleTcpCommunication() {
         float cTds = cmd.substring(11, commaIdx).toFloat();
         float cTurb = cmd.substring(commaIdx + 1).toFloat();
         overrideSensorActive = true;
-        injectedTdsPpm = cTds;
-        injectedTurbNtu = cTurb;
+        simTdsPpm = cTds;
+        simTurbNtu = cTurb;
         currentPresetName = "CUSTOM";
-        Serial.print("\n[CUSTOM DIUBAH] -> TDS: "); Serial.print(injectedTdsPpm, 1);
-        Serial.print(" | Turb: "); Serial.println(injectedTurbNtu, 1);
+        Serial.print("\n[CUSTOM DIUBAH] -> TDS: "); Serial.print(simTdsPpm, 1);
+        Serial.print(" | Turb: "); Serial.println(simTurbNtu, 1);
       }
     }
     else if (cmd == "OPEN_PORTAL") {
@@ -410,22 +410,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
   if (message == "SET_PRESET:LOW") {
     overrideSensorActive = true;
-    injectedTdsPpm = 85.0f;
-    injectedTurbNtu = 15.0f;
+    simTdsPpm = 85.0f;
+    simTurbNtu = 15.0f;
     currentPresetName = "LOW";
     Serial.println("[MQTT] Preset diubah ke LOW");
   } 
   else if (message == "SET_PRESET:MEDIUM") {
     overrideSensorActive = true;
-    injectedTdsPpm = 245.0f;
-    injectedTurbNtu = 215.0f;
+    simTdsPpm = 245.0f;
+    simTurbNtu = 215.0f;
     currentPresetName = "MEDIUM";
     Serial.println("[MQTT] Preset diubah ke MEDIUM");
   } 
   else if (message == "SET_PRESET:HIGH") {
     overrideSensorActive = true;
-    injectedTdsPpm = 480.0f;
-    injectedTurbNtu = 450.0f;
+    simTdsPpm = 480.0f;
+    simTurbNtu = 450.0f;
     currentPresetName = "HIGH";
     Serial.println("[MQTT] Preset diubah ke HIGH");
   } 
@@ -443,8 +443,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       float cTds = message.substring(11, commaIdx).toFloat();
       float cTurb = message.substring(commaIdx + 1).toFloat();
       overrideSensorActive = true;
-      injectedTdsPpm = cTds;
-      injectedTurbNtu = cTurb;
+      simTdsPpm = cTds;
+      simTurbNtu = cTurb;
       currentPresetName = "CUSTOM";
       Serial.println("[MQTT] Preset diubah ke CUSTOM");
     }
@@ -685,8 +685,8 @@ void processTestingCycle(unsigned long currentMillis) {
     if (overrideSensorActive) {
       float jitterTds = (float)random(-15, 16) / 10.0f;
       float jitterTurb = (float)random(-20, 21) / 10.0f;
-      tdsPpm = max(5.0f, injectedTdsPpm + jitterTds);
-      turbidityNtu = max(0.0f, injectedTurbNtu + jitterTurb);
+      tdsPpm = max(5.0f, simTdsPpm + jitterTds);
+      turbidityNtu = max(0.0f, simTurbNtu + jitterTurb);
       tdsVoltage = (tdsPpm / 500.0f) * 1.5f;
       tdsRaw = (int)(tdsVoltage * (ADC_RESOLUTION / VREF));
       turbidityVoltage = max(0.2f, 2.4f - (turbidityNtu * 1.4f / 500.0f));

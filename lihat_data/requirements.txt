@@ -1,4 +1,4 @@
-# Dependensi Python Injector & MQTT Viewer
+# Dependensi Modul Lihat Data & MQTT Viewer
 paho-mqtt>=2.0.0
 pandas>=2.0.0
 python-dotenv>=1.0.0

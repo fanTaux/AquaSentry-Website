@@ -28,11 +28,11 @@ AquaSentry-Website/
 │   ├── inference_viewer.py       # Desktop GUI Edge AI Water Tester (5s Test on Demand)
 │   ├── main.py                   # Menu interaktif perekaman
 │   └── dataset/                  # 37 file dataset CSV resmi (Low, Med, High)
-├── python_injector/              # Operator Assistant & Live Cloud Injector (HiveMQ Cloud TLS)
+├── lihat_data/                   # Modul Lihat Data & Kontrol Telemetri (HiveMQ Cloud TLS)
 │   ├── .env                      # Kredensial HiveMQ Cloud & IP ESP32
 │   ├── .env.example              # Template konfigurasi kredensial
 │   ├── config.py                 # Parser konfigurasi .env
-│   ├── live_viewer.py            # Terminal Live Assistant (Preset Injector & Countdown 30s)
+│   ├── live_viewer.py            # Terminal Pemantau Live Data (Opsi 1-3 & Countdown 30s)
 │   ├── mqtt_viewer.py            # MQTT Monitor stream telemetri real-time
 │   └── requirements.txt          # Dependensi paho-mqtt, pandas, python-dotenv
 ├── training/                     # Pipeline ML Windowing & Edge AI Compiler
@@ -148,7 +148,7 @@ Akses web di: `http://localhost:5173`
 
 ---
 
-## ⚡ 5. Firmware ESP32 Edge AI & Python Injector (HiveMQ Cloud MQTT)
+## ⚡ 5. Firmware ESP32 Edge AI & Modul Lihat Data (HiveMQ Cloud MQTT)
 
 ### A. Fitur ESP32 Edge AI (`esp_firmware_edge_ai/`):
 1. **100% Offline Edge AI (Random Forest)**: Menjalankan klasifikasi ML langsung di memori ESP32 tanpa internet. Jendela 5 detik (50 sampel @ 10 Hz), pengujian 30 detik ber-voting mayoritas.
@@ -163,14 +163,14 @@ Akses web di: `http://localhost:5173`
    - 🔵 **LED Biru (GPIO 33)**: Standby / Blink saat uji 30s
    - 🔘 **Push Button (GPIO 32)**: Mulai / Cancel uji 30s
 
-### B. Menjalankan Python Injector & Live Viewer (`python_injector/`):
+### B. Menjalankan Modul Lihat Data & Live Viewer (lihat_data/):
 Install dependensi:
 ```bash
-pip install -r python_injector/requirements.txt
+pip install -r lihat_data/requirements.txt
 ```
-Jalankan Live Viewer / Operator Assistant:
+Jalankan Live Viewer / Pemantau Data:
 ```bash
-python python_injector/live_viewer.py
+python lihat_data/live_viewer.py
 ```
 - Pilih preset sensor (`[1] LOW`, `[2] MEDIUM`, `[3] HIGH`, `[4] CUSTOM`).
 - Kirim perintah start uji (`[S]`) atau batalkan (`[C]`).

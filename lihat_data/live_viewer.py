@@ -1,13 +1,13 @@
 """
 =============================================================================
-AQUASENTRY - HIVEMQ CLOUD MQTT LIVE VIEWER & OPERATOR ASSISTANT
+AQUASENTRY - HIVEMQ CLOUD MQTT LIVE DATA VIEWER
 =============================================================================
 Tidak memerlukan Wi-Fi yang sama! ESP32 dan Laptop berkomunikasi secara
 global melalui HiveMQ Cloud (TLS Port 8883).
 
 Fitur:
 1. Hubungkan ke Broker HiveMQ Cloud Serverless (TLS 8883) secara instan.
-2. Memilih Preset Sensor (LOW, MEDIUM, HIGH, CUSTOM) langsung dari laptop.
+2. Memilih Opsi Data (Opsi 1, Opsi 2, Opsi 3, Kustom) langsung dari laptop.
 3. Mendeteksi trigger pengujian baik dari tombol fisik ESP32 (D32) maupun dari Cloud.
 4. Menampilkan hitung mundur 30 detik secara realtime beserta pembacaan sensor.
 5. Menampilkan hasil akhir konsensus Edge AI dan rata-rata TDS/Turbiditas 30 detik.
@@ -207,7 +207,7 @@ def main():
     global mqtt_client, stop_flag
 
     print("=" * 75)
-    print("   AQUASENTRY - OPERATOR ASSISTANT (HIVEMQ CLOUD MQTT)   ")
+    print("      AQUASENTRY - MENU LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)      ")
     print("   Cloud Broker: " + MQTT_BROKER)
     print("   Bebas jaringan: Tidak perlu satu Wi-Fi dengan ESP32!")
     print("=" * 75)
@@ -270,18 +270,18 @@ def main():
             online_str = "🟢 ONLINE" if is_online else "🟡 STANDBY / MENUNGGU SINYAL"
 
             print("\n" + "=" * 75)
-            print("                       MENU KONTROL & INJEKSI")
+            print("                        MENU LIHAT DATA & KONTROL")
             print("=" * 75)
             print(f" [Status ESP32]         : {online_str}")
-            print(f" [Preset Terpilih]     : {preset} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
+            print(f" [Data Terpilih]        : {preset} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
             print("-" * 75)
-            print(" [1] Preset LOW    (Air Bersih) -> Target AI: 🟢 LED HIJAU  (D25)")
-            print(" [2] Preset MEDIUM (Air Sedang) -> Target AI: 🟡 LED KUNING (D22)")
-            print(" [3] Preset HIGH   (Air Kotor)  -> Target AI: 🔴 LED MERAH  (D23)")
-            print(" [4] Preset CUSTOM              -> Input Nilai TDS & Turbiditas Bebas")
-            print(" [R] RESET Sensor               -> Gunakan Pembacaan Pin Sensor Fisik")
-            print(" [S] START Pengujian 30 Detik   -> Picu Sesi Pengujian dari Cloud")
-            print(" [C] CANCEL Pengujian           -> Hentikan Pengujian")
+            print(" [1] Opsi 1 (Low)")
+            print(" [2] Opsi 2 (Medium)")
+            print(" [3] Opsi 3 (High)")
+            print(" [4] Opsi 4 (Kustom)            -> Input Nilai TDS & Turbiditas Bebas")
+            print(" [R] Reset Sensor               -> Gunakan Pembacaan Sensor Fisik")
+            print(" [S] Start Pengujian (30 Detik) -> Mulai Sesi Pengujian")
+            print(" [C] Batalkan Pengujian         -> Hentikan Pengujian")
             print(" [W] Buka Web Hotspot Setup     -> Buka Captive Portal Wi-Fi Baru")
             print(" [Q] Keluar")
             print("=" * 75)
@@ -298,7 +298,7 @@ def main():
                     state["preset"] = "LOW"
                     state["tds_ppm"] = 85.0
                     state["turbidity_ntu"] = 15.0
-                print("\n >>> [✓ TERKIRIM] Preset diset ke LOW (Air Bersih).")
+                print("\n >>> [✓ TERKIRIM] Opsi 1 (Low) dipilih.")
                 print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
 
             elif pilihan == "2":
@@ -307,7 +307,7 @@ def main():
                     state["preset"] = "MEDIUM"
                     state["tds_ppm"] = 245.0
                     state["turbidity_ntu"] = 215.0
-                print("\n >>> [✓ TERKIRIM] Preset diset ke MEDIUM (Air Sedang).")
+                print("\n >>> [✓ TERKIRIM] Opsi 2 (Medium) dipilih.")
                 print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
 
             elif pilihan == "3":
@@ -316,7 +316,7 @@ def main():
                     state["preset"] = "HIGH"
                     state["tds_ppm"] = 480.0
                     state["turbidity_ntu"] = 450.0
-                print("\n >>> [✓ TERKIRIM] Preset diset ke HIGH (Air Kotor).")
+                print("\n >>> [✓ TERKIRIM] Opsi 3 (High) dipilih.")
                 print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
 
             elif pilihan == "4":
@@ -328,7 +328,7 @@ def main():
                         state["preset"] = "CUSTOM"
                         state["tds_ppm"] = float(c_tds)
                         state["turbidity_ntu"] = float(c_turb)
-                    print(f"\n >>> [✓ TERKIRIM] Custom diset: TDS={c_tds} PPM, Turb={c_turb} NTU.")
+                    print(f"\n >>> [✓ TERKIRIM] Opsi 4 (Kustom) dipilih: TDS={c_tds} PPM, Turb={c_turb} NTU.")
                 except ValueError:
                     print(" [!] Input angka tidak valid.")
 
@@ -352,7 +352,7 @@ def main():
                 print("\n >>> [✓ TERKIRIM] Membuka Captive Portal Wi-Fi ESP32.")
 
             elif pilihan == "q":
-                print("\n[✓] Keluar dari Operator Assistant.")
+                print("\n[✓] Keluar dari Menu Lihat Data.")
                 break
 
             else:
