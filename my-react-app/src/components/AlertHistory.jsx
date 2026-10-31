@@ -46,7 +46,7 @@ export default function AlertHistory({ isDropdown = false }) {
                                     <p className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{date}, {time}</p>
                                 </div>
                                 <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
-                                    TDS {alert.tds.toFixed(0)} ppm &middot; Turbidity {alert.turbidity.toFixed(1)} NTU &middot; ARS {alert.ars}
+                                    TDS {alert.tds.toFixed(0)} ppm &middot; Turbidity {alert.turbidity.toFixed(1)} NTU
                                 </p>
                             </div>
                         </div>

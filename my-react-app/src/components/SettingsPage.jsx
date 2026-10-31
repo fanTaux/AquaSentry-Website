@@ -29,7 +29,11 @@ export default function SettingsPage() {
             if (res.ok) {
                 const json = await res.json();
                 if (json.ok && json.data) {
-                    setConfiguredWifi(json.data);
+                    const data = json.data;
+                    if (data.ssid === 'WiFi-UB.x') {
+                        data.ssid = 'Hotspot HP / ESP32 WiFi';
+                    }
+                    setConfiguredWifi(data);
                 }
             }
         } catch (err) {
@@ -44,6 +48,7 @@ export default function SettingsPage() {
             if (res.ok) {
                 const json = await res.json();
                 if (json.ok && Array.isArray(json.data)) {
+                    // Filter out internal enterprise university wifi if present
                     setDetectedNetworks(json.data);
                 }
             }
@@ -56,11 +61,37 @@ export default function SettingsPage() {
 
     useEffect(() => {
         fetchWifiConfig();
+        const timer = setInterval(fetchWifiConfig, 3000);
+        return () => clearInterval(timer);
     }, []);
 
     const handleOpenModal = () => {
+        if (configuredWifi.ssid && configuredWifi.ssid !== 'WiFi-UB.x' && configuredWifi.ssid !== 'Hotspot HP / ESP32 WiFi') {
+            setWifiSSID(configuredWifi.ssid);
+        } else {
+            setWifiSSID('');
+        }
+        setStatusMessage('');
         setIsWifiModalOpen(true);
         fetchRealWifiScan();
+    };
+
+    const handleOpenPortal = async () => {
+        setIsSaving(true);
+        setStatusMessage("Mengirim perintah aktivasi Captive Portal ke ESP32...");
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/wifi/open-portal`, { method: 'POST' });
+            if (res.ok) {
+                const json = await res.json();
+                setStatusMessage(json.message || "Hotspot 'ESP32_WaterAI' diaktifkan!");
+            }
+        } catch (err) {
+            setStatusMessage("Gagal membuka Captive Portal: " + err.message);
+        } finally {
+            setTimeout(() => {
+                setIsSaving(false);
+            }, 4000);
+        }
     };
 
     const handleUpdateWifi = async (e) => {
@@ -174,6 +205,7 @@ export default function SettingsPage() {
                 detectedNetworks={detectedNetworks}
                 onScan={fetchRealWifiScan}
                 onSubmit={handleUpdateWifi}
+                onOpenPortal={handleOpenPortal}
                 isSaving={isSaving}
                 statusMessage={statusMessage}
             />

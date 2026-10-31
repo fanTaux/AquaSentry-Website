@@ -30,22 +30,24 @@ export default function TopNavBar({ onProfileClick }) {
     }, []);
 
     return (
-        <header className="fixed top-0 w-full z-50 flex justify-between items-center px-margin h-16 bg-surface/60 backdrop-blur-md shadow-sm">
-            <div className="flex items-center gap-base">
-                <div className="w-10 h-10 bg-gradient-to-br from-aqua-primary to-aqua-secondary rounded-xl flex items-center justify-center shadow-lg">
-                    <span className="material-symbols-outlined text-white text-2xl">water_drop</span>
-                </div>
-                <span className="font-headline-lg text-headline-lg font-black text-aqua-text tracking-tight">Aqua<span className="text-aqua-primary">Sentry</span></span>
+        <header className="fixed top-0 w-full z-50 flex justify-between items-center px-3.5 sm:px-6 h-14 sm:h-16 bg-white/80 backdrop-blur-md border-b border-gray-100/80 shadow-xs transition-all">
+            <div className="flex items-center">
+                <img 
+                    src="/logo-full.png" 
+                    alt="AquaSentry" 
+                    className="h-7 sm:h-9 w-auto object-contain cursor-pointer transition-transform hover:scale-105 drop-shadow-xs" 
+                />
             </div>
-            <div className="flex items-center gap-md">
+            <div className="flex items-center gap-2 sm:gap-3">
                 <button
                     onClick={onProfileClick}
-                    className="w-10 h-10 rounded-full overflow-hidden border-2 border-aqua-secondary shadow-sm hover:opacity-80 transition-opacity cursor-pointer bg-aqua-primary flex items-center justify-center"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-aqua-secondary shadow-xs hover:opacity-85 transition-opacity cursor-pointer bg-aqua-primary flex items-center justify-center shrink-0"
+                    title="Profil Pengguna"
                 >
                     {user?.avatar ? (
                         <img alt={user.name} className="w-full h-full object-cover" src={user.avatar} />
                     ) : (
-                        <span className="text-xs font-black text-white">{user?.name?.substring(0, 2).toUpperCase() || 'OP'}</span>
+                        <span className="text-[11px] sm:text-xs font-black text-white">{user?.name?.substring(0, 2).toUpperCase() || 'OP'}</span>
                     )}
                 </button>
             </div>

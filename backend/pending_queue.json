@@ -1,0 +1,86 @@
+[
+  {
+    "test_id": "TEST-20261029-080916",
+    "timestamp_esp": "29 Okt 2026, 08:09:16 WIB",
+    "final_verdict": "High",
+    "avg_tds": 480.0,
+    "avg_turbidity": 450.0,
+    "preset": "HIGH",
+    "vote_counts": {
+      "low": 0,
+      "medium": 0,
+      "high": 1
+    },
+    "created_at": 1793261357
+  },
+  {
+    "test_id": "TEST-20261029-080759",
+    "timestamp_esp": "29 Okt 2026, 08:07:59 WIB",
+    "final_verdict": "Low",
+    "avg_tds": 85.0,
+    "avg_turbidity": 15.0,
+    "preset": "LOW",
+    "vote_counts": {
+      "low": 6,
+      "medium": 0,
+      "high": 0
+    },
+    "created_at": 1793261282
+  },
+  {
+    "test_id": "TEST-20261029-080249",
+    "timestamp_esp": "29 Okt 2026, 08:02:49 WIB",
+    "final_verdict": "Low",
+    "avg_tds": 85.1,
+    "avg_turbidity": 15.1,
+    "preset": "LOW",
+    "vote_counts": {
+      "low": 6,
+      "medium": 0,
+      "high": 0
+    },
+    "created_at": 1793260970
+  },
+  {
+    "test_id": "TEST-20261029-080139",
+    "timestamp_esp": "29 Okt 2026, 08:01:39 WIB",
+    "final_verdict": "Low",
+    "avg_tds": 85.0,
+    "avg_turbidity": 15.0,
+    "preset": "LOW",
+    "vote_counts": {
+      "low": 6,
+      "medium": 0,
+      "high": 0
+    },
+    "created_at": 1793260899
+  },
+  {
+    "test_id": "TEST-20261029-070529",
+    "timestamp_esp": "29 Okt 2026, 07:05:29 WIB",
+    "final_verdict": "Low",
+    "avg_tds": 85.0,
+    "avg_turbidity": 15.0,
+    "preset": "LOW",
+    "vote_counts": {
+      "low": 6,
+      "medium": 0,
+      "high": 0
+    },
+    "created_at": 1793257529
+  },
+  {
+    "test_id": "TEST-20261027-143114",
+    "timestamp_esp": "27 Okt 2026, 14:31:14 WIB",
+    "final_verdict": "Low",
+    "avg_tds": 85.0,
+    "avg_turbidity": 15.0,
+    "preset": "LOW",
+    "vote_counts": {
+      "low": 6,
+      "medium": 0,
+      "high": 0
+    },
+    "created_at": 1793111477
+  }
+]

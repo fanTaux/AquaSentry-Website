@@ -1,105 +1,202 @@
-export default function RiskGauge({ ars, color, label }) {
-    const value = Math.min(100, Math.max(0, ars));
-    const radius = 75;
-    const strokeWidth = 16;
-    const cx = 100;
-    const cy = 95;
-    const circumference = Math.PI * radius; // ~235.6
-    const strokeDashoffset = circumference * (1 - value / 100);
+import React from 'react';
 
-    // Calculate position for indicator dot at current arc tip
-    const angleRad = Math.PI * (1 - value / 100);
-    const dotX = cx + radius * Math.cos(angleRad);
-    const dotY = cy - radius * Math.sin(angleRad);
+export default function RiskGauge({ level, label, color }) {
+    // Normalisasi kategori risiko: 'low' | 'moderate' | 'high'
+    const activeZone = (() => {
+        const l = (level || label || '').toLowerCase();
+        if (l.includes('high') || l.includes('tinggi') || l.includes('buruk')) return 'high';
+        if (l.includes('med') || l.includes('moderate') || l.includes('sedang')) return 'moderate';
+        return 'low';
+    })();
+
+    const zoneConfigs = {
+        low: {
+            color: '#10B981',
+            label: 'LOW RISK',
+            sublabel: 'Kualitas Air Baik & Aman',
+            needleAngle: -60, // Menghadap ke zona hijau (kiri)
+        },
+        moderate: {
+            color: '#F59E0B',
+            label: 'MODERATE RISK',
+            sublabel: 'Kualitas Air Cukup / Perhatian',
+            needleAngle: 0, // Menghadap ke zona kuning (tengah)
+        },
+        high: {
+            color: '#EF4444',
+            label: 'HIGH RISK',
+            sublabel: 'Kualitas Air Buruk / Berisiko',
+            needleAngle: 60, // Menghadap ke zona merah (kanan)
+        }
+    };
+
+    const currentConfig = zoneConfigs[activeZone] || zoneConfigs.low;
+    const activeColor = color || currentConfig.color;
+
+    // Geometri Gauge SVG
+    const cx = 120;
+    const cy = 115;
+    const radius = 82;
+    const strokeWidth = 14;
+    const needleLength = 58;
+
+    // Utilitas konversi sudut polar ke kartesian SVG
+    // Sudut dihitung dari sumbu X positif, berlawanan arah jarum jam (180° = kiri, 90° = atas, 0° = kanan)
+    const polarToCartesian = (angleDeg) => {
+        const rad = (angleDeg * Math.PI) / 180.0;
+        return {
+            x: cx + radius * Math.cos(rad),
+            y: cy - radius * Math.sin(rad)
+        };
+    };
+
+    // Fungsi menggambar kurva busur SVG (clockwise dari kiri ke kanan)
+    const createArcPath = (startAngle, endAngle) => {
+        const p1 = polarToCartesian(startAngle);
+        const p2 = polarToCartesian(endAngle);
+        return `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${radius} ${radius} 0 0 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    };
+
+    // 3 Zona Pembagian Busur:
+    // Zona 1 (Hijau/Rendah): 176° s/d 124°
+    // Zona 2 (Kuning/Sedang): 116° s/d 64°
+    // Zona 3 (Merah/Tinggi): 56° s/d 4°
+    const arcLow = createArcPath(176, 124);
+    const arcMed = createArcPath(116, 64);
+    const arcHigh = createArcPath(56, 4);
 
     return (
-        <div className="flex flex-col items-center select-none">
-            <div className="relative w-56 h-32 flex items-center justify-center">
-                <svg viewBox="0 0 200 115" className="w-full h-full overflow-visible">
+        <div className="flex flex-col items-center select-none w-full max-w-[280px]">
+            <div className="relative w-full h-36 flex items-center justify-center">
+                <svg viewBox="0 0 240 135" className="w-full h-full overflow-visible">
                     <defs>
                         <filter id="gauge-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.4" />
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={activeColor} floodOpacity="0.5" />
                         </filter>
-                        <linearGradient id="gauge-track-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#E2E8F0" />
-                            <stop offset="100%" stopColor="#CBD5E1" />
-                        </linearGradient>
                     </defs>
 
-                    {/* Track Background - High Contrast Slate/Grey */}
+                    {/* Zona 1: Hijau / Rendah */}
                     <path
-                        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+                        d={arcLow}
                         fill="none"
-                        stroke="url(#gauge-track-grad)"
-                        strokeWidth={strokeWidth}
+                        stroke="#10B981"
+                        strokeWidth={activeZone === 'low' ? strokeWidth + 2 : strokeWidth}
                         strokeLinecap="round"
+                        opacity={activeZone === 'low' ? 1.0 : 0.25}
+                        filter={activeZone === 'low' ? "url(#gauge-glow)" : undefined}
+                        className="transition-all duration-700 ease-out"
                     />
 
-                    {/* Active Filled Arc */}
+                    {/* Zona 2: Kuning / Sedang */}
                     <path
-                        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+                        d={arcMed}
                         fill="none"
-                        stroke={color}
-                        strokeWidth={strokeWidth}
+                        stroke="#F59E0B"
+                        strokeWidth={activeZone === 'moderate' ? strokeWidth + 2 : strokeWidth}
                         strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        filter="url(#gauge-glow)"
-                        className="transition-all duration-1000 ease-out"
+                        opacity={activeZone === 'moderate' ? 1.0 : 0.25}
+                        filter={activeZone === 'moderate' ? "url(#gauge-glow)" : undefined}
+                        className="transition-all duration-700 ease-out"
                     />
 
-                    {/* Indicator Dot at current value */}
-                    {value > 0 && (
-                        <circle
-                            cx={dotX}
-                            cy={dotY}
-                            r={strokeWidth / 3.2}
-                            fill="#FFFFFF"
-                            stroke={color}
-                            strokeWidth="3.5"
-                            className="transition-all duration-1000 ease-out"
+                    {/* Zona 3: Merah / Tinggi */}
+                    <path
+                        d={arcHigh}
+                        fill="none"
+                        stroke="#EF4444"
+                        strokeWidth={activeZone === 'high' ? strokeWidth + 2 : strokeWidth}
+                        strokeLinecap="round"
+                        opacity={activeZone === 'high' ? 1.0 : 0.25}
+                        filter={activeZone === 'high' ? "url(#gauge-glow)" : undefined}
+                        className="transition-all duration-700 ease-out"
+                    />
+
+                    {/* Label Teks Busur di Atas Tiap Zona */}
+                    <text
+                        x="42"
+                        y="52"
+                        textAnchor="middle"
+                        className={`text-[9px] font-black uppercase tracking-wider transition-opacity duration-500 ${
+                            activeZone === 'low' ? 'fill-emerald-600 font-extrabold' : 'fill-slate-400 opacity-60'
+                        }`}
+                    >
+                        Rendah
+                    </text>
+
+                    <text
+                        x="120"
+                        y="18"
+                        textAnchor="middle"
+                        className={`text-[9px] font-black uppercase tracking-wider transition-opacity duration-500 ${
+                            activeZone === 'moderate' ? 'fill-amber-600 font-extrabold' : 'fill-slate-400 opacity-60'
+                        }`}
+                    >
+                        Sedang
+                    </text>
+
+                    <text
+                        x="198"
+                        y="52"
+                        textAnchor="middle"
+                        className={`text-[9px] font-black uppercase tracking-wider transition-opacity duration-500 ${
+                            activeZone === 'high' ? 'fill-rose-600 font-extrabold' : 'fill-slate-400 opacity-60'
+                        }`}
+                    >
+                        Tinggi
+                    </text>
+
+                    {/* Jarum / Needle Penunjuk Dinamis */}
+                    <g
+                        style={{
+                            transformOrigin: `${cx}px ${cy}px`,
+                            transform: `rotate(${currentConfig.needleAngle}deg)`,
+                            transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        }}
+                    >
+                        {/* Batang jarum dengan ketebalan meruncing */}
+                        <polygon
+                            points={`${cx - 3.5},${cy} ${cx},${cy - needleLength} ${cx + 3.5},${cy}`}
+                            fill={activeColor}
+                            opacity="0.95"
                         />
-                    )}
+                        {/* Ujung titik jarum bercahaya */}
+                        <circle
+                            cx={cx}
+                            cy={cy - needleLength}
+                            r="3.5"
+                            fill="#FFFFFF"
+                            stroke={activeColor}
+                            strokeWidth="2.5"
+                        />
+                    </g>
 
-                    {/* Ticks at 0, 25, 50, 75, 100 */}
-                    {[0, 25, 50, 75, 100].map((tick) => {
-                        const tickRad = Math.PI * (1 - tick / 100);
-                        const innerR = radius - strokeWidth / 2 - 7;
-                        const outerR = radius - strokeWidth / 2 - 3;
-                        const x1 = cx + innerR * Math.cos(tickRad);
-                        const y1 = cy - innerR * Math.sin(tickRad);
-                        const x2 = cx + outerR * Math.cos(tickRad);
-                        const y2 = cy - outerR * Math.sin(tickRad);
-                        return (
-                            <line
-                                key={tick}
-                                x1={x1}
-                                y1={y1}
-                                x2={x2}
-                                y2={y2}
-                                stroke="#94A3B8"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                            />
-                        );
-                    })}
+                    {/* Poros Pivot Tengah Jarum */}
+                    <circle cx={cx} cy={cy} r="7" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2.5" />
+                    <circle cx={cx} cy={cy} r="3.5" fill={activeColor} className="transition-colors duration-500" />
                 </svg>
             </div>
 
-            {/* Score & Label */}
-            <div className="flex flex-col items-center -mt-6">
-                <p className="text-4xl font-black text-aqua-text tracking-tight">{ars}</p>
-                <span
-                    className="text-[11px] font-black uppercase tracking-widest py-1 px-4 rounded-full mt-1 border shadow-xs"
+            {/* Status Kualitas Air di Bagian Tengah (Tanpa Angka Skor) */}
+            <div className="flex flex-col items-center -mt-5 text-center">
+                <div
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full font-black text-xs tracking-wider border shadow-xs transition-all duration-500"
                     style={{
-                        backgroundColor: `${color}1F`,
-                        color: color,
-                        borderColor: `${color}40`
+                        backgroundColor: `${activeColor}18`,
+                        color: activeColor,
+                        borderColor: `${activeColor}45`
                     }}
                 >
-                    {label}
-                </span>
-                <p className="text-[10px] text-aqua-text-muted font-bold uppercase tracking-widest mt-2">AquaSentry Risk Score</p>
+                    <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: activeColor }} />
+                    <span>{label || currentConfig.label}</span>
+                </div>
+
+                <p className="text-xs font-semibold text-slate-700 mt-1.5 transition-all duration-500">
+                    {currentConfig.sublabel}
+                </p>
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    Klasifikasi Kualitas Air
+                </p>
             </div>
         </div>
     );

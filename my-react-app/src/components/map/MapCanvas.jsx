@@ -14,7 +14,7 @@ export const getBadgeStyle = (level) => {
     }
 };
 
-export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSite }) {
+export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSite, onEditSite }) {
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markersRef = useRef({});
@@ -25,8 +25,8 @@ export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSit
         if (mapInstanceRef.current) return;
 
         const map = L.map(mapContainerRef.current, {
-            center: [-8.4500, 115.2300],
-            zoom: 10.5,
+            center: [-7.9525, 112.6145],
+            zoom: 12,
             zoomControl: false
         });
 
@@ -63,35 +63,61 @@ export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSit
             return true;
         });
 
-        filteredSites.forEach(site => {
+        filteredSites.forEach((site, idx) => {
             const badge = getBadgeStyle(site.riskLevel);
+            const pinNo = site.no || (idx + 1);
 
             const customIcon = L.divIcon({
-                className: 'custom-teardrop-pin',
+                className: 'custom-pin-marker',
                 html: `
-                    <div className="relative flex flex-col items-center justify-center cursor-pointer group">
-                        <span className="animate-ping absolute top-1 inline-flex h-7 w-7 rounded-full ${badge.pulse} opacity-40"></span>
-                        <svg viewBox="0 0 24 32" class="w-9 h-11 drop-shadow-md transform transition-transform group-hover:scale-125 overflow-visible">
-                            <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 20 12 20s12-11 12-20c0-6.63-5.37-12-12-12z" fill="${badge.hexColor}" stroke="#ffffff" stroke-width="1.8"/>
-                            <circle cx="12" cy="11" r="5" fill="#ffffff"/>
-                            <circle cx="12" cy="11" r="3" fill="${badge.hexColor}"/>
-                        </svg>
+                    <div class="relative flex items-center justify-center cursor-pointer group">
+                        <div class="relative flex items-center justify-center w-7 h-7 rounded-full shadow-lg text-white font-black text-xs border-2 border-white transition-all duration-200 group-hover:scale-125 ring-1 ring-black/15" style="background-color: ${badge.hexColor};">
+                            <span class="animate-ping absolute inset-0 rounded-full ${badge.pulse} opacity-30"></span>
+                            <span class="relative z-10">${pinNo}</span>
+                        </div>
                     </div>
                 `,
-                iconSize: [36, 44],
-                iconAnchor: [18, 44]
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
             });
 
             const marker = L.marker([site.lat, site.lng], { icon: customIcon }).addTo(map);
+            marker.bindTooltip(`<b>#${pinNo}</b> ${site.name}`, { direction: 'top', offset: [0, -14] });
+
+            marker.bindPopup(`
+                <div style="font-family: inherit; min-width: 180px; padding: 4px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 4px;">
+                        <span style="background: ${badge.hexColor}; color: white; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 800;">#${pinNo}</span>
+                        <span style="font-size: 10px; font-weight: 800; color: #64748b;">${site.category || 'Tervalidasi'}</span>
+                    </div>
+                    <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${site.name}</div>
+                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">Sumber: <b>${site.sumber_air || site.keterangan || '-'}</b></div>
+                    <div style="font-size: 11px; color: #334155; margin-bottom: 8px; background: #f8fafc; padding: 4px 6px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        TDS: <b>${site.tds}</b> ppm | Turb: <b>${site.turbidity}</b> NTU
+                    </div>
+                    <button id="map-edit-btn-${site.id}" style="width: 100%; background: #2563eb; color: #ffffff; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        ✏️ Edit Data Lokasi
+                    </button>
+                </div>
+            `);
+
+            marker.on('popupopen', () => {
+                const btn = document.getElementById(`map-edit-btn-${site.id}`);
+                if (btn) {
+                    btn.onclick = () => {
+                        if (onEditSite) onEditSite(site);
+                    };
+                }
+            });
 
             marker.on('click', () => {
                 onSelectSite(site);
-                map.flyTo([site.lat, site.lng], 12, { duration: 1 });
+                map.flyTo([site.lat, site.lng], 13, { duration: 1 });
             });
 
             markersRef.current[site.id] = marker;
         });
-    }, [sites, riskFilter, onSelectSite]);
+    }, [sites, riskFilter, onSelectSite, onEditSite]);
 
     // Fly to Selected Site when changed externally
     useEffect(() => {
@@ -109,7 +135,7 @@ export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSit
                 <div className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3 text-[11px] font-bold text-aqua-text">
                     <span className="material-symbols-outlined text-xl text-aqua-primary">explore</span>
                     <div>
-                        <span className="block font-black text-xs text-aqua-text">Wilayah Uji: Bali Explorer</span>
+                        <span className="block font-black text-xs text-aqua-text">Wilayah Uji: Malang & Sekitarnya</span>
                         <span className="text-[10px] text-gray-500 font-normal">Pin Teardrop (Hijau: Aman, Kuning: Waspada, Merah: Bahaya)</span>
                     </div>
                 </div>

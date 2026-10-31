@@ -27,7 +27,8 @@ export default function LocationWizardModal({
     onDetectLocation,
     onSubmit,
     reading,
-    history
+    history,
+    queuedTestItem
 }) {
     const pickerMapContainerRef = useRef(null);
     const pickerMapInstanceRef = useRef(null);
@@ -238,128 +239,166 @@ export default function LocationWizardModal({
                             />
                         </div>
 
-                        {/* PARAMETER SOURCE SELECTION (MODE TAB: SENSOR vs MANUAL) */}
-                        <div className="space-y-3 bg-blue-50/60 border border-blue-100 p-3.5 rounded-2xl">
-                            <label className="text-[11px] font-bold text-aqua-primary uppercase tracking-wider flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-base">sensors</span>
-                                Sumber Hasil Parameter Air
-                            </label>
+                        {/* PARAMETER SOURCE SELECTION */}
+                        {queuedTestItem ? (
+                            <div className="space-y-3 bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-xs">
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-gray-800 flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-base text-aqua-primary">verified</span>
+                                        Hasil Uji ESP32 (Terkunci dari Antrean)
+                                    </span>
+                                    <span className="font-mono text-[11px] font-bold text-gray-500 bg-gray-200/70 px-2 py-0.5 rounded">
+                                        {queuedTestItem.test_id}
+                                    </span>
+                                </div>
 
-                            {/* Mode Switcher Buttons */}
-                            <div className="grid grid-cols-2 gap-2 bg-white/90 p-1 rounded-xl border border-blue-100">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setParamSourceMode('sensor');
-                                        setSelectedHistoryIndex('live');
-                                        if (reading) {
-                                            setNewSiteTds(reading.tds);
-                                            setNewSiteTurb(reading.turbidity);
-                                        }
-                                    }}
-                                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${paramSourceMode === 'sensor' ? 'bg-aqua-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
-                                >
-                                    <span className="material-symbols-outlined text-sm">sensors</span>
-                                    <span>Data Sensor Teruji</span>
-                                </button>
+                                <div className="flex items-center justify-between pt-1">
+                                    <span className={`text-xs font-black px-3.5 py-1 rounded-full text-white shadow-xs ${
+                                        queuedTestItem.final_verdict === 'High' ? 'bg-rose-500' :
+                                        queuedTestItem.final_verdict === 'Medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                                    }`}>
+                                        {queuedTestItem.final_verdict === 'High' ? '🔴 Tinggi (Bahaya)' :
+                                         queuedTestItem.final_verdict === 'Medium' ? '🟡 Sedang (Waspada)' : '🟢 Rendah (Aman)'}
+                                    </span>
+                                    <span className="text-[11px] text-gray-500 font-medium">
+                                        {queuedTestItem.timestamp_esp || 'Pengujian Selesai'}
+                                    </span>
+                                </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setParamSourceMode('manual');
-                                        setSelectedHistoryIndex('custom');
-                                    }}
-                                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${paramSourceMode === 'manual' ? 'bg-aqua-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
-                                >
-                                    <span className="material-symbols-outlined text-sm">edit</span>
-                                    <span>Input Manual Sendiri</span>
-                                </button>
+                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 text-center shadow-xs">
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase block tracking-wider">TDS Terukur</span>
+                                        <span className="text-base font-black text-gray-800 mt-0.5 block">{queuedTestItem.avg_tds} <span className="text-[10px] text-gray-400 font-normal">ppm</span></span>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 text-center shadow-xs">
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase block tracking-wider">Turbiditas Terukur</span>
+                                        <span className="text-base font-black text-gray-800 mt-0.5 block">{queuedTestItem.avg_turbidity} <span className="text-[10px] text-gray-400 font-normal">NTU</span></span>
+                                    </div>
+                                </div>
                             </div>
+                        ) : (
+                            <div className="space-y-3 bg-blue-50/60 border border-blue-100 p-3.5 rounded-2xl">
+                                <label className="text-[11px] font-bold text-aqua-primary uppercase tracking-wider flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-base">sensors</span>
+                                    Sumber Hasil Parameter Air
+                                </label>
 
-                            {/* MODE A: SELECT FROM RECORDED TELEMETRY SENSOR DATA */}
-                            {paramSourceMode === 'sensor' && (
-                                <div className="space-y-2 pt-1">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase block">Pilih Rekaman Telemetri Sensor:</label>
-                                    <select
-                                        value={selectedHistoryIndex}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setSelectedHistoryIndex(val);
-                                            if (val === 'live' && reading) {
+                                {/* Mode Switcher Buttons */}
+                                <div className="grid grid-cols-2 gap-2 bg-white/90 p-1 rounded-xl border border-blue-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setParamSourceMode('sensor');
+                                            setSelectedHistoryIndex('live');
+                                            if (reading) {
                                                 setNewSiteTds(reading.tds);
                                                 setNewSiteTurb(reading.turbidity);
-                                            } else {
-                                                const idx = parseInt(val, 10);
-                                                if (!isNaN(idx) && history[idx]) {
-                                                    setNewSiteTds(history[idx].tds);
-                                                    setNewSiteTurb(history[idx].turbidity);
-                                                }
                                             }
                                         }}
-                                        className="w-full bg-white border border-blue-200 text-aqua-text font-bold text-xs p-2.5 rounded-xl focus:outline-none focus:border-aqua-primary cursor-pointer shadow-xs"
+                                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${paramSourceMode === 'sensor' ? 'bg-aqua-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
                                     >
-                                        <option value="live">
-                                            [Live Sensor] TDS: {reading?.tds || 110} mg/L, Turbiditas: {reading?.turbidity || 0.5} NTU
-                                        </option>
-                                        {history.length > 0 && (
-                                            history.slice().reverse().map((item, idx) => {
-                                                const timeStr = new Date(item.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                                                return (
-                                                    <option key={idx} value={history.length - 1 - idx}>
-                                                        [History {timeStr}] TDS: {item.tds} mg/L, Turbiditas: {item.turbidity} NTU ({item.risk?.label})
-                                                    </option>
-                                                );
-                                            })
-                                        )}
-                                    </select>
+                                        <span className="material-symbols-outlined text-sm">sensors</span>
+                                        <span>Data Sensor Teruji</span>
+                                    </button>
 
-                                    {/* Read-Only Parameter Preview Badges */}
-                                    <div className="grid grid-cols-2 gap-3 pt-1">
-                                        <div className="bg-white/90 p-2.5 rounded-xl border border-blue-100 text-center">
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase block">TDS Terpilih</span>
-                                            <span className="text-sm font-black text-aqua-text">{newSiteTds} mg/L</span>
-                                        </div>
-                                        <div className="bg-white/90 p-2.5 rounded-xl border border-blue-100 text-center">
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase block">Turbiditas Terpilih</span>
-                                            <span className="text-sm font-black text-aqua-text">{newSiteTurb} NTU</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setParamSourceMode('manual');
+                                            setSelectedHistoryIndex('custom');
+                                        }}
+                                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${paramSourceMode === 'manual' ? 'bg-aqua-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">edit</span>
+                                        <span>Input Manual Sendiri</span>
+                                    </button>
+                                </div>
+
+                                {/* MODE A: SELECT FROM RECORDED TELEMETRY SENSOR DATA */}
+                                {paramSourceMode === 'sensor' && (
+                                    <div className="space-y-2 pt-1">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase block">Pilih Rekaman Telemetri Sensor:</label>
+                                        <select
+                                            value={selectedHistoryIndex}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setSelectedHistoryIndex(val);
+                                                if (val === 'live' && reading) {
+                                                    setNewSiteTds(reading.tds);
+                                                    setNewSiteTurb(reading.turbidity);
+                                                } else {
+                                                    const idx = parseInt(val, 10);
+                                                    if (!isNaN(idx) && history[idx]) {
+                                                        setNewSiteTds(history[idx].tds);
+                                                        setNewSiteTurb(history[idx].turbidity);
+                                                    }
+                                                }
+                                            }}
+                                            className="w-full bg-white border border-blue-200 text-aqua-text font-bold text-xs p-2.5 rounded-xl focus:outline-none focus:border-aqua-primary cursor-pointer shadow-xs"
+                                        >
+                                            <option value="live">
+                                                [Live Sensor] TDS: {reading?.tds || 110} mg/L, Turbiditas: {reading?.turbidity || 0.5} NTU
+                                            </option>
+                                            {history.length > 0 && (
+                                                history.slice().reverse().map((item, idx) => {
+                                                    const timeStr = new Date(item.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                                    return (
+                                                        <option key={idx} value={history.length - 1 - idx}>
+                                                            [History {timeStr}] TDS: {item.tds} mg/L, Turbiditas: {item.turbidity} NTU ({item.risk?.label})
+                                                        </option>
+                                                    );
+                                                })
+                                            )}
+                                        </select>
+
+                                        {/* Read-Only Parameter Preview Badges */}
+                                        <div className="grid grid-cols-2 gap-3 pt-1">
+                                            <div className="bg-white/90 p-2.5 rounded-xl border border-blue-100 text-center">
+                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">TDS Terpilih</span>
+                                                <span className="text-sm font-black text-aqua-text">{newSiteTds} mg/L</span>
+                                            </div>
+                                            <div className="bg-white/90 p-2.5 rounded-xl border border-blue-100 text-center">
+                                                <span className="text-[9px] font-bold text-gray-400 uppercase block">Turbiditas Terpilih</span>
+                                                <span className="text-sm font-black text-aqua-text">{newSiteTurb} NTU</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* MODE B: TYPE CUSTOM VALUES MANUALLY */}
-                            {paramSourceMode === 'manual' && (
-                                <div className="space-y-2 pt-1">
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase block">Ketik Sendiri Nilai Parameter Air:</span>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">TDS Terukur (mg/L)</label>
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                value={newSiteTds}
-                                                onChange={(e) => setNewSiteTds(e.target.value)}
-                                                className="w-full bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-mono font-bold text-aqua-text focus:outline-none focus:border-aqua-primary"
-                                                placeholder="120"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Turbiditas (NTU)</label>
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                value={newSiteTurb}
-                                                onChange={(e) => setNewSiteTurb(e.target.value)}
-                                                className="w-full bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-mono font-bold text-aqua-text focus:outline-none focus:border-aqua-primary"
-                                                placeholder="1.2"
-                                                required
-                                            />
+                                {/* MODE B: TYPE CUSTOM VALUES MANUALLY */}
+                                {paramSourceMode === 'manual' && (
+                                    <div className="space-y-2 pt-1">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase block">Ketik Sendiri Nilai Parameter Air:</span>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">TDS Terukur (mg/L)</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={newSiteTds}
+                                                    onChange={(e) => setNewSiteTds(e.target.value)}
+                                                    className="w-full bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-mono font-bold text-aqua-text focus:outline-none focus:border-aqua-primary"
+                                                    placeholder="120"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Turbiditas (NTU)</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={newSiteTurb}
+                                                    onChange={(e) => setNewSiteTurb(e.target.value)}
+                                                    className="w-full bg-white px-3 py-2 rounded-xl border border-blue-200 text-xs font-mono font-bold text-aqua-text focus:outline-none focus:border-aqua-primary"
+                                                    placeholder="1.2"
+                                                    required
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex items-center gap-3 pt-2">
                             <button

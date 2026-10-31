@@ -1,52 +1,45 @@
+import os
+import json
 import re
 import subprocess
 
-active_wifi_config = {
-    "ssid": "wahh",
-    "status": "Terhubung",
-    "ip": "192.168.1.100",
-    "rssi": -57
-}
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "wifi_config.json")
+
+def load_wifi_config():
+    default_config = {
+        "ssid": "Hotspot HP / ESP32 WiFi",
+        "status": "Terhubung",
+        "ip": "192.168.4.1",
+        "rssi": -55
+    }
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data, dict):
+                    # Sanitize any accidental laptop WiFi-UB.x campus network
+                    if data.get("ssid") == "WiFi-UB.x":
+                        data["ssid"] = "Hotspot HP / ESP32 WiFi"
+                    return {**default_config, **data}
+        except Exception as e:
+            print(f"[WIFI CONFIG] Gagal membaca {CONFIG_FILE}: {e}")
+    return default_config
+
+active_wifi_config = load_wifi_config()
+
+def save_wifi_config():
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(active_wifi_config, f, indent=2)
+    except Exception as e:
+        print(f"[WIFI CONFIG] Gagal menyimpan {CONFIG_FILE}: {e}")
 
 def scan_real_wifi_networks():
-    """Scans real physical Wi-Fi networks nearby using Windows netsh API."""
+    """Scans physical Wi-Fi networks visible nearby using Windows netsh API."""
     networks = []
     seen_ssids = set()
 
-    # 1. First check current connected interface
-    try:
-        if_out = subprocess.check_output("netsh wlan show interfaces", shell=True, text=True, errors="ignore")
-        curr_ssid = None
-        curr_rssi = -55
-        curr_auth = "WPA2"
-        for line in if_out.splitlines():
-            line = line.strip()
-            if line.startswith("SSID") and ":" in line and not line.startswith("BSSID"):
-                curr_ssid = line.split(":", 1)[1].strip()
-            elif line.startswith("Rssi") and ":" in line:
-                try:
-                    curr_rssi = int(line.split(":", 1)[1].strip())
-                except Exception:
-                    pass
-            elif line.startswith("Signal") and ":" in line:
-                try:
-                    pct = int(line.split(":", 1)[1].strip().replace("%", ""))
-                    curr_rssi = -100 + int(pct / 2)
-                except Exception:
-                    pass
-            elif line.startswith("Authentication") and ":" in line:
-                curr_auth = line.split(":", 1)[1].strip()
-        if curr_ssid:
-            networks.append({
-                "ssid": curr_ssid,
-                "rssi": curr_rssi,
-                "security": curr_auth or "WPA2"
-            })
-            seen_ssids.add(curr_ssid)
-    except Exception:
-        pass
-
-    # 2. Get all visible networks from netsh wlan show networks mode=bssid
+    # Get visible networks from netsh wlan show networks mode=bssid
     try:
         out = subprocess.check_output("netsh wlan show networks mode=bssid", shell=True, text=True, errors="ignore")
         curr_net = {}

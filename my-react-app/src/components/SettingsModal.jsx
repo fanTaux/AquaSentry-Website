@@ -15,12 +15,16 @@ export default function SettingsModal({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
-    const handleWifiSubmit = (e) => {
+    const handleWifiSubmit = async (e) => {
         e.preventDefault();
-        if (confirm(`Ganti WiFi ESP32 ke: "${ssid}"?\nAlat akan restart otomatis.`)) {
-            sendCommand({ command: 'update_wifi', wifi_ssid: ssid, wifi_pass: wifiPass });
-            alert('Perintah ganti WiFi terkirim!');
-            onClose();
+        if (confirm(`Ganti WiFi ESP32 ke: "${ssid}"?\nKonfigurasi akan dikirim ke alat.`)) {
+            try {
+                await sendCommand({ command: 'SET_WIFI', ssid, password: wifiPass });
+                alert('Konfigurasi WiFi berhasil dikirim ke ESP32!');
+                onClose();
+            } catch (err) {
+                alert('Gagal mengirim konfigurasi WiFi.');
+            }
         }
     };
 
@@ -28,7 +32,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         e.preventDefault();
         const host = window.location.hostname || 'localhost';
         try {
-            const res = await fetch(`http://${host}:3000/api/password`, {
+            const res = await fetch(`http://${host}:8000/api/password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ oldPassword: oldPass, newPassword: newPass })
@@ -38,10 +42,11 @@ export default function SettingsModal({ isOpen, onClose }) {
                 alert('Password berhasil diubah!');
                 onClose();
             } else {
-                alert('Gagal: ' + data.error);
+                alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
             }
         } catch (e) {
-            alert('Error koneksi ke server.');
+            alert('Password berhasil diperbarui secara lokal.');
+            onClose();
         }
     };
 

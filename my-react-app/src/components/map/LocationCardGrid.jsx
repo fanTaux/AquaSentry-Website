@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getBadgeStyle } from './MapCanvas';
 
-export default function LocationCardGrid({ sites, filteredSites, selectedSite, onSelectSite }) {
+export default function LocationCardGrid({ sites, filteredSites, selectedSite, onSelectSite, onEditSite }) {
     // Accordion expand/collapse state for each risk category group
     const [openGroups, setOpenGroups] = useState({
         low: true,
@@ -99,33 +99,57 @@ export default function LocationCardGrid({ sites, filteredSites, selectedSite, o
                                             onClick={() => onSelectSite(s)}
                                             className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2 text-left ${isSelected ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border-aqua-primary ring-2 ring-aqua-primary/20 shadow-md scale-[1.01]' : 'bg-gray-50/80 border-gray-100 hover:bg-gray-100/90 hover:border-gray-200'}`}
                                         >
-                                            {/* Card Header: Status Badge & Keterangan */}
+                                            {/* Card Header: Status Badge & Keterangan + Edit Pencil Button */}
                                             <div className="flex items-center justify-between gap-1">
                                                 <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${badge.bg} text-white flex items-center gap-1 shadow-xs`}>
                                                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                                                     {s.category}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-aqua-primary bg-white px-2 py-0.5 rounded-md border border-gray-100 truncate max-w-[120px]">
-                                                    {s.keterangan}
-                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[10px] font-bold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-100 truncate max-w-[90px]">
+                                                        {s.keterangan || 'Data'}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (onEditSite) onEditSite(s);
+                                                        }}
+                                                        title="Klik untuk Edit Titik Lokasi Ini"
+                                                        className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200 flex items-center gap-1 text-[11px] font-black transition-all cursor-pointer shadow-2xs group/btn"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[13px] group-hover/btn:rotate-12 transition-transform">edit</span>
+                                                        <span>Edit</span>
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            {/* Location Name */}
-                                            <h4 className="text-xs font-black text-aqua-text truncate tracking-tight">{s.name}</h4>
+                                            {/* Location Name & Number */}
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    {s.no && (
+                                                        <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[10px] font-black flex items-center justify-center shrink-0 shadow-2xs">
+                                                            {s.no}
+                                                        </span>
+                                                    )}
+                                                    <h4 className="text-xs font-black text-aqua-text truncate tracking-tight">{s.name}</h4>
+                                                </div>
+                                                {s.sumber_air && (
+                                                    <div className="text-[10px] pl-0.5 text-gray-500 font-bold">
+                                                        {s.sumber_air}
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* Live Metrics Grid */}
-                                            <div className="grid grid-cols-3 gap-1 bg-white/90 p-2 rounded-xl border border-gray-100 text-center">
+                                            <div className="grid grid-cols-2 gap-2 bg-white/90 p-2 rounded-xl border border-gray-100 text-center">
                                                 <div>
                                                     <span className="text-[9px] font-bold text-gray-400 uppercase block">TDS</span>
-                                                    <span className="text-xs font-black text-gray-800 block">{s.tds}</span>
+                                                    <span className="text-xs font-black text-gray-800 block">{s.tds} <span className="text-[9px] font-normal text-gray-400">ppm</span></span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[9px] font-bold text-gray-400 uppercase block">TURB</span>
-                                                    <span className="text-xs font-black text-gray-800 block">{s.turbidity}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-[9px] font-bold text-aqua-primary uppercase block">ASS</span>
-                                                    <span className="text-xs font-black text-aqua-primary block">{s.assScore}</span>
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase block">TURBIDITAS</span>
+                                                    <span className="text-xs font-black text-gray-800 block">{s.turbidity} <span className="text-[9px] font-normal text-gray-400">NTU</span></span>
                                                 </div>
                                             </div>
 

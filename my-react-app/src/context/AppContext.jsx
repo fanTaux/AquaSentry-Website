@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useTelemetry } from '../hooks/useTelemetry';
+import { sendEspCommand } from '../services/api';
 
 const AppContext = createContext();
 
 const BACKEND_API_URL = 'http://localhost:8000';
-const DEMO_DEVICE_ID = 'aquasentry-esp32-01';
-const DEMO_DEVICE_NAME = 'AquaSentry Unit #1 (Data Alvin ML Core)';
+const DEMO_DEVICE_ID = 'ESP32_AquaSentry';
+const DEMO_DEVICE_NAME = 'AquaSentry Device';
 
 export function AppProvider({ children }) {
     const [token, setToken] = useState(sessionStorage.getItem('aquasentry_token') || null);
@@ -16,7 +17,20 @@ export function AppProvider({ children }) {
     const [now, setNow] = useState(Date.now());
 
     // Use custom telemetry hook
-    const { reading, history, isConnected, isEspOnline } = useTelemetry(setHasNewAlert);
+    const {
+        reading,
+        history,
+        clearHistory,
+        isConnected,
+        isEspOnline,
+        deviceStatus,
+        isTesting,
+        testElapsedSec,
+        preset,
+        aiPrediction,
+        finalVerdict,
+        voteCounts
+    } = useTelemetry(setHasNewAlert);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -72,7 +86,15 @@ export function AppProvider({ children }) {
         sessionStorage.removeItem('aquasentry_user');
     };
 
-    const sendCommand = async () => { };
+    const sendCommand = async (commandData) => {
+        try {
+            return await sendEspCommand(commandData);
+        } catch (err) {
+            console.error('Error sending command to ESP32:', err);
+            return { ok: false, error: err.message };
+        }
+    };
+
     const fetchDevices = async () => { };
 
     const state = {
@@ -93,9 +115,17 @@ export function AppProvider({ children }) {
             state,
             reading,
             history,
+            clearHistory,
             isConnected,
             espLastSeen,
             isDeviceOnline,
+            deviceStatus,
+            isTesting,
+            testElapsedSec,
+            preset,
+            aiPrediction,
+            finalVerdict,
+            voteCounts,
             token,
             user,
             login,
