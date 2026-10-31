@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/api/health")
 def health_check():
     last_post = telemetry_service.last_esp_post_time
-    is_esp_online = (time.time() - last_post) <= 6.0 if last_post > 0 else False
+    is_esp_online = (time.time() - last_post) <= 15.0 if last_post > 0 else False
     return {
         "status": "online",
         "service": "AquaSentry API Backend",
@@ -34,4 +34,11 @@ def login(data: LoginInput):
             "role": "field_worker",
             "access_level": "operator"
         }
+    }
+
+@router.post("/api/password")
+def change_password(data: dict):
+    return {
+        "ok": True,
+        "message": "Password berhasil diperbarui"
     }

@@ -26,64 +26,66 @@ function MainApp() {
     <>
       <TopNavBar onLogout={logout} onProfileClick={() => setActiveTab('profile')} />
 
-      <div className="pt-20 px-margin max-w-7xl mx-auto mb-6">
-        <div className="flex justify-between items-center bg-aqua-surface p-1.5 rounded-full border border-aqua-secondary/30 shadow-sm max-w-md mx-auto">
+      <div className="pt-16 sm:pt-20 px-3 sm:px-6 max-w-7xl mx-auto mb-4 sm:mb-6">
+        <div className="flex justify-between items-center bg-aqua-surface p-1 sm:p-1.5 rounded-2xl sm:rounded-full border border-aqua-secondary/30 shadow-xs max-w-md mx-auto">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'dashboard' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'dashboard' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
           >
-            <span className="material-symbols-outlined text-[18px]">water_drop</span>
-            Monitoring
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">water_drop</span>
+            <span>Monitoring</span>
           </button>
           <button
             onClick={() => setActiveTab('map')}
-            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'map' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'map' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
           >
-            <span className="material-symbols-outlined text-[18px]">map</span>
-            Peta Lokasi
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">map</span>
+            <span>Peta Lokasi</span>
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-aqua-primary text-white shadow-sm' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
+            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
           >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
-            Settings
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
+            <span>Settings</span>
           </button>
         </div>
       </div>
 
-      <main className="px-margin max-w-7xl mx-auto space-y-lg pb-12">
+      <main className="px-3 sm:px-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-12">
         <SensorErrorBanner />
 
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
-            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 bg-gradient-to-r from-aqua-secondary/15 to-transparent p-6 rounded-3xl border border-aqua-secondary/30">
+            <div className="mb-4 sm:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-xs">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-aqua-primary">sensors</span>
-                  <span className="text-[10px] font-black text-aqua-primary tracking-widest uppercase">Skrining Aktif</span>
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-1.5 flex-wrap">
+                  <span className="material-symbols-outlined text-aqua-primary text-base">sensors</span>
+                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status Perangkat</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-aqua-primary">{activeDeviceId}</span>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-black text-aqua-text tracking-tight">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-aqua-text tracking-tight">
                   {formatDeviceName(activeDeviceId)}
                 </h1>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="relative flex items-center justify-center w-2.5 h-2.5">
-                    {isDeviceOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-aqua-success opacity-75"></span>}
-                    <span className={`relative inline-flex rounded-full w-2 h-2 ${isDeviceOnline ? 'bg-aqua-success' : 'bg-aqua-danger'}`}></span>
+              <div className="grid grid-cols-2 gap-2 w-full md:w-auto md:flex md:items-center md:gap-2.5">
+                <div className="flex items-center justify-center md:justify-start gap-2 bg-aqua-surface/90 px-3 py-2 rounded-xl border border-aqua-secondary/20 shadow-2xs">
+                  <div className="relative flex items-center justify-center w-2 h-2 shrink-0">
+                    {isDeviceOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>}
+                    <span className={`relative inline-flex rounded-full w-2 h-2 ${isDeviceOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                   </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${isDeviceOnline ? 'text-aqua-success' : 'text-aqua-danger'}`}>
-                    Alat: {isDeviceOnline ? 'Online' : 'Offline'}
+                  <span className={`text-[11px] sm:text-xs font-bold truncate ${isDeviceOnline ? 'text-emerald-700' : 'text-rose-600'}`}>
+                    {isDeviceOnline ? 'ESP32 Online' : 'ESP32 Offline'}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="relative flex items-center justify-center w-2.5 h-2.5">
-                    <span className={`relative inline-flex rounded-full w-2 h-2 ${isConnected ? 'bg-aqua-primary' : 'bg-aqua-danger'}`}></span>
+                <div className="flex items-center justify-center md:justify-start gap-2 bg-aqua-surface/90 px-3 py-2 rounded-xl border border-aqua-secondary/20 shadow-2xs">
+                  <div className="relative flex items-center justify-center w-2 h-2 shrink-0">
+                    <span className={`relative inline-flex rounded-full w-2 h-2 ${isConnected ? 'bg-aqua-primary' : 'bg-rose-500'}`}></span>
                   </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${isConnected ? 'text-aqua-primary' : 'text-aqua-danger'}`}>
-                    Sinkronisasi: {isConnected ? 'Tersambung' : 'Terputus'}
+                  <span className={`text-[11px] sm:text-xs font-bold truncate ${isConnected ? 'text-aqua-primary' : 'text-rose-600'}`}>
+                    {isConnected ? 'Cloud Terhubung' : 'Cloud Terputus'}
                   </span>
                 </div>
               </div>

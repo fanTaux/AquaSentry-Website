@@ -41,6 +41,11 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Environment variables
+.env
+*.env
+!.env.example
+
 # OS / Temp
 *.tmp
 *.bak

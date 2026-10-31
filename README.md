@@ -7,25 +7,34 @@ Sistem pemantauan kualitas air terintegrasi mencakup akuisisi data nirkabel dari
 ## 📂 Struktur Direktori Proyek
 
 ```text
-Bali/
-├── AquaSentry-Website/           # Aplikasi Web & Frontend React (Branch alvin)
-│   ├── my-react-app/             # Kode antarmuka React + Vite
-│   ├── backend/                  # Salinan backend terpadu
-│   └── aquasentry_core.py        # Core skoring & inferensi
+AquaSentry-Website/
 ├── backend/                      # Backend API REST FastAPI modular
-│   ├── app/                      # Routes, Models, Services
+│   ├── app/                      # Routes, Models, Services (MQTT HiveMQ TLS, TCP LAN, WiFi, Queue)
 │   ├── app.py                    # Entrypoint server FastAPI
-│   └── locations_saved.json      # Cache lokasi sensor
-├── esp_firmware/                 # Firmware ESP32 Akuisisi Data Sensor
+│   └── locations_saved.json      # Cache lokasi sensor terdaftar
+├── esp_firmware/                 # Firmware ESP32 Akuisisi Data Sensor (TCP 10 Hz Dasar)
 │   ├── esp_firmware.ino          # Firmware transmisi TCP Socket 10 Hz
 │   └── tds_hardware_checker/     # Utilitas kalibrasi & cek ADC TDS
-├── python_recorder/              # Utilitas Perekam Data & GUI Tester
+├── esp_firmware_edge_ai/         # Firmware ESP32 Edge AI (Random Forest 100% Offline)
+│   ├── esp_firmware_edge_ai.ino  # Inferensi offline ESP32, Captive Portal, HiveMQ TLS
+│   ├── config.h                  # Konfigurasi Pinout PCB, ADC, MQTT, Timing
+│   ├── portal_html.h             # UI Web Captive Portal Wi-Fi
+│   └── rf_model.h                # Header Model Random Forest C++
+├── my-react-app/                 # Antarmuka Dashboard Web (React + Vite + Tailwind CSS)
+├── python_recorder/              # Utilitas Perekam Dataset & GUI Tester (TCP 10 Hz)
 │   ├── config.py                 # Konfigurasi IP & Port TCP ESP32
 │   ├── data_client.py            # Socket client TCP
 │   ├── data_saver.py             # Perekam otomatis ke CSV
 │   ├── inference_viewer.py       # Desktop GUI Edge AI Water Tester (5s Test on Demand)
 │   ├── main.py                   # Menu interaktif perekaman
 │   └── dataset/                  # 37 file dataset CSV resmi (Low, Med, High)
+├── python_injector/              # Operator Assistant & Live Cloud Injector (HiveMQ Cloud TLS)
+│   ├── .env                      # Kredensial HiveMQ Cloud & IP ESP32
+│   ├── .env.example              # Template konfigurasi kredensial
+│   ├── config.py                 # Parser konfigurasi .env
+│   ├── live_viewer.py            # Terminal Live Assistant (Preset Injector & Countdown 30s)
+│   ├── mqtt_viewer.py            # MQTT Monitor stream telemetri real-time
+│   └── requirements.txt          # Dependensi paho-mqtt, pandas, python-dotenv
 ├── training/                     # Pipeline ML Windowing & Edge AI Compiler
 │   ├── config.yaml               # Konfigurasi segmentasi & hyperparameter
 │   ├── preprocess.py             # Feature extraction (8 fitur statistik)
@@ -135,3 +144,34 @@ cd AquaSentry-Website/my-react-app
 npm run dev
 ```
 Akses web di: `http://localhost:5173`
+
+
+---
+
+## ⚡ 5. Firmware ESP32 Edge AI & Python Injector (HiveMQ Cloud MQTT)
+
+### A. Fitur ESP32 Edge AI (`esp_firmware_edge_ai/`):
+1. **100% Offline Edge AI (Random Forest)**: Menjalankan klasifikasi ML langsung di memori ESP32 tanpa internet. Jendela 5 detik (50 sampel @ 10 Hz), pengujian 30 detik ber-voting mayoritas.
+2. **Wi-Fi Captive Portal**: Hotspot setup `ESP32_WaterAI` (password: `12345678`) di `http://192.168.4.1` untuk provisioning SSID/Password permanen di Flash NVS.
+3. **Konektivitas Ganda**:
+   - **Local TCP (Port 8080)**: Komunikasi latensi rendah via LAN.
+   - **Cloud MQTT TLS (Port 8883)**: Broker HiveMQ Cloud Serverless.
+4. **Indikator LED Fisik**:
+   - 🔴 **LED Merah (GPIO 23)**: Kategori High (Air Kotor)
+   - 🟡 **LED Kuning (GPIO 22)**: Kategori Medium (Air Sedang)
+   - 🟢 **LED Hijau (GPIO 25)**: Kategori Low (Air Bersih)
+   - 🔵 **LED Biru (GPIO 33)**: Standby / Blink saat uji 30s
+   - 🔘 **Push Button (GPIO 32)**: Mulai / Cancel uji 30s
+
+### B. Menjalankan Python Injector & Live Viewer (`python_injector/`):
+Install dependensi:
+```bash
+pip install -r python_injector/requirements.txt
+```
+Jalankan Live Viewer / Operator Assistant:
+```bash
+python python_injector/live_viewer.py
+```
+- Pilih preset sensor (`[1] LOW`, `[2] MEDIUM`, `[3] HIGH`, `[4] CUSTOM`).
+- Kirim perintah start uji (`[S]`) atau batalkan (`[C]`).
+- Pantau hitung mundur 30 detik dan konsensus prediksi AI secara langsung dari Cloud.

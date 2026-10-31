@@ -25,11 +25,9 @@ export default function Login() {
             </div>
 
             <div className="bg-white/80 backdrop-blur-md border border-white/60 shadow-2xl w-full max-w-[400px] p-8 rounded-3xl text-center relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-aqua-primary to-aqua-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <span className="material-symbols-outlined text-white text-3xl">water_drop</span>
+                <div className="flex items-center justify-center mx-auto mb-4">
+                    <img src="/logo-full.png" alt="AquaSentry" className="h-12 w-auto object-contain" />
                 </div>
-
-                <h2 className="text-2xl font-black text-aqua-text mb-1 tracking-tight">Aqua<span className="text-aqua-primary">Sentry</span></h2>
                 <p className="text-xs text-gray-500 mb-2">Alat skrining dini kualitas air berbasis IoT dan AI.</p>
                 <p className="text-[10px] text-aqua-primary font-bold mb-6 bg-aqua-secondary/15 inline-block px-3 py-1 rounded-full">Mode Demo &mdash; data sensor disimulasikan</p>
 

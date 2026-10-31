@@ -1,9 +1,5 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import RiskGauge from './dashboard/RiskGauge';
-import ReadingCard from './dashboard/ReadingCard';
-import MetricModal from './dashboard/MetricModal';
-import RiskAdviceCard from './dashboard/RiskAdviceCard';
 
 const riskCopy = {
     low: {
@@ -28,271 +24,382 @@ const riskCopy = {
     },
 };
 
+const ITEMS_PER_PAGE = 5;
+
 export default function DashboardMetrics() {
-    const { state, history, isDeviceOnline } = useAppContext();
+    const {
+        state,
+        history,
+        clearHistory,
+        isDeviceOnline,
+        isTesting,
+        testElapsedSec,
+        finalVerdict,
+        sendCommand,
+        aiPrediction
+    } = useAppContext();
     const [selectedReading, setSelectedReading] = useState(null);
-    const [activeParamModal, setActiveParamModal] = useState(null);
+    const [pageIndex, setPageIndex] = useState(1);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+    const [actionFeedback, setActionFeedback] = useState('');
 
     const { tds, turbidity, ars, risk, lastUpdate } = state;
     const copy = riskCopy[risk.level] || riskCopy.low;
+
+    const handleClearHistory = async () => {
+        if (window.confirm('Apakah Anda yakin ingin mengosongkan semua riwayat pengukuran?')) {
+            if (clearHistory) await clearHistory();
+            setPageIndex(1);
+        }
+    };
 
     const lastUpdateLabel = lastUpdate
         ? new Date(lastUpdate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         : '-';
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 15;
+    const elapsed = Math.min(Math.max(testElapsedSec || 0, 0), 30);
+    const progressPercent = Math.round((elapsed / 30) * 100);
+    const remainingSec = Math.max(0, 30 - elapsed);
 
-    const reversedHistory = [...history].reverse();
-    const totalItems = reversedHistory.length;
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-
-    const pageIndex = Math.min(Math.max(currentPage, 1), totalPages);
-    const startIndex = (pageIndex - 1) * ITEMS_PER_PAGE;
-    const currentHistoryPage = reversedHistory.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-    const handlePrevPage = () => {
-        setCurrentPage(prev => Math.max(prev - 1, 1));
+    const handleStartTest = async () => {
+        setIsActionLoading(true);
+        setActionFeedback('Mengirim sinyal mulai ke ESP32...');
+        try {
+            await sendCommand({ command: 'START_TEST' });
+            setTimeout(() => setActionFeedback(''), 3000);
+        } catch (err) {
+            setActionFeedback('Gagal: ' + err.message);
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
-    const handleNextPage = () => {
-        setCurrentPage(prev => Math.min(prev + 1, totalPages));
+    const handleCancelTest = async () => {
+        setIsActionLoading(true);
+        setActionFeedback('Membatalkan pengujian...');
+        try {
+            await sendCommand({ command: 'CANCEL_TEST' });
+            setTimeout(() => setActionFeedback(''), 3000);
+        } catch (err) {
+            setActionFeedback('Gagal: ' + err.message);
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
-    const getParamStats = (param) => {
-        if (!history || history.length === 0) {
-            const val = state[param] || 0;
-            return { avg: val, min: val, max: val, count: 1 };
-        }
-        const values = history.map(h => h[param]).filter(v => typeof v === 'number');
-        if (values.length === 0) {
-            const val = state[param] || 0;
-            return { avg: val, min: val, max: val, count: 1 };
-        }
-        const sum = values.reduce((a, b) => a + b, 0);
-        const avg = sum / values.length;
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        return { avg, min, max, count: values.length };
-    };
+    // Evaluasi status kualitas air dengan warna & teks semantik yang tepat
+    const effectiveVerdict = (finalVerdict || aiPrediction || risk.level || 'Low').toLowerCase();
+    const isHigh = effectiveVerdict.includes('high') || effectiveVerdict.includes('keruh') || effectiveVerdict.includes('buruk');
+    const isMedium = effectiveVerdict.includes('med') || effectiveVerdict.includes('moderate') || effectiveVerdict.includes('sedang');
 
-    const paramDetails = {
-        tds: {
-            title: 'TDS (Total Dissolved Solids)',
-            subtitle: 'Padatan Terlarut Total',
-            icon: 'opacity',
-            unit: 'ppm',
-            currentValue: tds.toFixed(0),
-            description: 'Padatan Terlarut Total (TDS) mengukur jumlah total mineral, garam, logam, serta kation dan anion terlarut dalam air. TDS merupakan salah satu parameter utama untuk menentukan tingkat kejernihan dan kandungan mineral terlarut pada air.',
-            impact: 'Nilai TDS yang terlalu tinggi dapat merusak rasa air (menjadi pahit/berunsur logam), meninggalkan kerak pada perabotan, dan mengindikasikan tingginya zat mineral atau polutan terlarut.',
-            thresholds: [
-                { range: '< 300 ppm', status: 'Ideal / Sangat Baik', color: '#2DC653', desc: 'Air dengan rasa murni dan paling ideal dikonsumsi.' },
-                { range: '300 - 600 ppm', status: 'Baik / Layak', color: '#0077B6', desc: 'Dalam batas aman untuk kebutuhan sehari-hari.' },
-                { range: '600 - 1.000 ppm', status: 'Cukup (Waspada)', color: '#F4A261', desc: 'Rasa air mulai terasa mineral berat.' },
-                { range: '1.000 - 1.500 ppm', status: 'Batas Maksimum', color: '#F07A3C', desc: 'Batas toleransi baku mutu WHO / Permenkes RI.' },
-                { range: '> 1.500 ppm', status: 'Tinggi (Berisiko)', color: '#E63946', desc: 'Melebihi ambang batas aman, tidak disarankan dikonsumsi langsung.' },
-            ],
-            standards: 'Batas Maksimum Permenkes RI & WHO: 1.500 ppm'
-        },
-        turbidity: {
-            title: 'Turbidity (Kekeruhan Air)',
-            subtitle: 'Tingkat Kekeruhan Air',
-            icon: 'blur_on',
-            unit: 'NTU',
-            currentValue: turbidity.toFixed(1),
-            description: 'Turbidity (Kekeruhan) mengukur seberapa jernih sampel air berdasarkan tingkat hamburan cahaya yang disebabkan oleh partikel halus tersuspensi (seperti tanah liat, lumpur, dan zat organik).',
-            impact: 'Air yang keruh membuat tampilan air kotor dan dapat melindungi mikroorganisme atau bakteri pathogen dari proses pencucian atau disinfeksi biasa.',
-            thresholds: [
-                { range: '< 1.0 NTU', status: 'Sangat Jernih', color: '#2DC653', desc: 'Sangat jernih transparan, standar air minum tinggi.' },
-                { range: '1.0 - 5.0 NTU', status: 'Jernih / Normal', color: '#0077B6', desc: 'Batas normal yang aman untuk penggunaan domestik.' },
-                { range: '5.0 - 10.0 NTU', status: 'Agak Keruh', color: '#F4A261', desc: 'Batas maksimum air bersih menurut Permenkes RI.' },
-                { range: '> 10.0 NTU', status: 'Sangat Keruh', color: '#E63946', desc: 'Tampak keruh secara visual, perlu pengendapan/filtrasi.' },
-            ],
-            standards: 'Batas Maksimum Permenkes RI: 10 NTU | Rekomendasi WHO: 5 NTU'
-        }
+    const riskInfo = isHigh ? {
+        level: 'high',
+        badgeText: 'High Risk (Air Keruh / Berisiko)',
+        badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+        iconBg: 'bg-rose-100 text-rose-600',
+        icon: 'warning',
+        title: 'Kualitas Air Buruk & Berisiko Tinggi',
+        desc: 'Parameter TDS atau Kekeruhan air melebihi ambang batas baku mutu. Sangat tidak disarankan untuk dikonsumsi langsung tanpa pengolahan intensif.',
+    } : isMedium ? {
+        level: 'moderate',
+        badgeText: 'Medium Risk (Air Sedang)',
+        badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+        iconBg: 'bg-amber-100 text-amber-600',
+        icon: 'info',
+        title: 'Kualitas Air Sedang — Perlu Filtrasi',
+        desc: 'Terdapat kandungan partikel terlarut atau kekeruhan sedang. Disarankan melakukan pengendapan, filtrasi, atau perebusan sebelum dikonsumsi.',
+    } : {
+        level: 'low',
+        badgeText: 'Low Risk (Air Bersih & Aman)',
+        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        iconBg: 'bg-emerald-100 text-emerald-600',
+        icon: 'check_circle',
+        title: 'Kualitas Air Baik & Rendah Risiko',
+        desc: 'Parameter fisika-kimia berada dalam batas baku mutu aman Permenkes RI. Air relatif bersih dan layak untuk kebutuhan domestik.',
     };
 
     return (
-        <div className="space-y-6 pb-8 animate-fade-in">
-            {/* HERO: current reading + ARS gauge */}
-            <section className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                <div className="flex flex-col md:flex-row items-center gap-8">
-                    <RiskGauge ars={ars} color={risk.color} label={risk.label} />
+        <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 animate-fade-in">
+            {/* MASTER UNIFIED HERO CARD: PENGUJIAN SENSOR + STATUS KLASIFIKASI KUALITAS AIR */}
+            <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-xs space-y-4 sm:space-y-6">
+                {/* 1. HEADER: Icon + Judul Pengujian + Status Konektivitas + Tombol Aksi */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 sm:pb-5 border-b border-gray-100">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center flex-shrink-0 shadow-xs mt-0.5 sm:mt-0">
+                            <span className="material-symbols-outlined text-xl sm:text-2xl">science</span>
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="text-sm sm:text-base md:text-xl font-black text-aqua-text tracking-tight leading-snug">
+                                Pengujian Sensor & Klasifikasi Kualitas Air
+                            </h2>
+                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                    !isDeviceOnline ? 'bg-gray-400' : isTesting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                                }`} />
+                                <span className={`text-[11px] sm:text-xs font-bold ${
+                                    !isDeviceOnline ? 'text-gray-400' : isTesting ? 'text-amber-600 font-extrabold' : 'text-emerald-700'
+                                }`}>
+                                    {!isDeviceOnline ? 'ESP32 Offline' : isTesting ? `Menguji (${elapsed}s / 30s)` : 'ESP32 Siap (Standby)'}
+                                </span>
+                                <span className="text-gray-300 hidden xs:inline">&bull;</span>
+                                <span className="text-[10px] sm:text-xs text-aqua-text-muted font-medium">Update: {lastUpdateLabel}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div className="flex-1 w-full">
-                        <h2 className="text-xl font-black text-aqua-text mb-1">{copy.title}</h2>
-                        <p className="text-sm text-aqua-text-muted mb-4 leading-relaxed">{copy.advice}</p>
+                    {/* Tombol Mulai / Batalkan Pengujian */}
+                    <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto">
+                        {!isTesting ? (
+                            <button
+                                type="button"
+                                disabled={isActionLoading}
+                                onClick={handleStartTest}
+                                className="w-full sm:w-auto bg-aqua-primary hover:bg-aqua-primary-hover active:scale-98 text-white text-xs font-black uppercase tracking-wider py-3 sm:py-3.5 px-5 sm:px-7 rounded-xl sm:rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span className="material-symbols-outlined text-lg sm:text-xl">play_arrow</span>
+                                <span>Mulai Pengujian (30 Detik)</span>
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={isActionLoading}
+                                onClick={handleCancelTest}
+                                className="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 active:scale-98 text-rose-700 border border-rose-200 text-xs font-black uppercase tracking-wider py-3 sm:py-3.5 px-5 sm:px-7 rounded-xl sm:rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-lg sm:text-xl">close</span>
+                                <span>Batalkan Pengujian ({remainingSec}s)</span>
+                            </button>
+                        )}
+                        {actionFeedback && (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-aqua-text-muted animate-fade-in text-center sm:text-right">{actionFeedback}</span>
+                        )}
+                    </div>
+                </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                            <ReadingCard
-                                icon="opacity"
-                                label="TDS"
-                                sublabel="Padatan Terlarut"
-                                value={tds.toFixed(0)}
-                                unit="ppm"
-                                hint="Ambang WHO/Permenkes: 1.500 ppm"
-                                onClick={() => setActiveParamModal('tds')}
-                            />
-                            <ReadingCard
-                                icon="blur_on"
-                                label="Turbidity"
-                                sublabel="Kekeruhan Air"
-                                value={turbidity.toFixed(1)}
-                                unit="NTU"
-                                hint="Ambang WHO/Permenkes: 10 NTU"
-                                onClick={() => setActiveParamModal('turbidity')}
+                {/* 2. PROGRESS BAR KETIKA PENGUJIAN 30 DETIK AKTIF */}
+                {isTesting && (
+                    <div className="bg-sky-50/50 border border-sky-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 space-y-2 animate-fade-in">
+                        <div className="flex justify-between items-center text-xs font-extrabold text-aqua-text">
+                            <span className="flex items-center gap-1.5 text-sky-800 text-[11px] sm:text-xs min-w-0 truncate">
+                                <span className="material-symbols-outlined text-base animate-spin shrink-0">sync</span>
+                                <span className="truncate">Edge AI Menganalisis Sampel Air...</span>
+                            </span>
+                            <span className="font-mono text-sky-900 bg-sky-100 px-2 py-0.5 rounded-lg text-xs shrink-0">{elapsed}s / 30s</span>
+                        </div>
+                        <div className="w-full h-2 sm:h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 transition-all duration-300 rounded-full"
+                                style={{ width: `${progressPercent}%` }}
                             />
                         </div>
+                        <div className="flex justify-between text-[10px] sm:text-[11px] text-aqua-text-muted font-bold">
+                            <span>Voting Sementara: {aiPrediction}</span>
+                            <span>Sisa: {remainingSec}s</span>
+                        </div>
+                    </div>
+                )}
 
-                        <div className="flex items-center justify-between text-[10px] font-bold text-aqua-text-muted uppercase tracking-widest">
-                            <span className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${isDeviceOnline ? 'bg-aqua-success' : 'bg-aqua-danger'}`}></span>
-                                {isDeviceOnline ? 'Sensor aktif' : 'Sensor offline'}
-                            </span>
-                            <span>Update terakhir: {lastUpdateLabel}</span>
+                {/* 3. HASIL STATUS KLASIFIKASI KUALITAS AIR */}
+                <div className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border transition-all ${
+                    riskInfo.level === 'high' ? 'bg-rose-50/70 border-rose-200' :
+                    riskInfo.level === 'moderate' ? 'bg-amber-50/70 border-amber-200' :
+                    'bg-emerald-50/70 border-emerald-200'
+                }`}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4">
+                        <div className="flex items-start sm:items-center gap-3 sm:gap-3.5 min-w-0">
+                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs ${riskInfo.iconBg}`}>
+                                <span className="material-symbols-outlined text-xl sm:text-2xl">{riskInfo.icon}</span>
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                    <span className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider border shadow-2xs ${riskInfo.badgeBg}`}>
+                                        {riskInfo.badgeText}
+                                    </span>
+                                    {finalVerdict && !isTesting && (
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500">
+                                            (Konsensus Hasil Uji 30 Detik)
+                                        </span>
+                                    )}
+                                </div>
+                                <h3 className="text-sm sm:text-base md:text-lg font-black text-slate-900 mt-1 leading-snug">
+                                    {riskInfo.title}
+                                </h3>
+                            </div>
+                        </div>
+
+                        {/* MINI STAT CHIPS: TDS & Turbidity */}
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-gray-200/50">
+                            <div className="bg-white/80 border border-gray-200/80 rounded-xl px-3 py-1.5 sm:py-2 text-center sm:text-left shadow-2xs">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">TDS</span>
+                                <span className="text-xs sm:text-base font-black text-slate-900">
+                                    {Number(tds || 0).toFixed(0)} <span className="text-[10px] font-bold text-gray-500">ppm</span>
+                                </span>
+                            </div>
+                            <div className="bg-white/80 border border-gray-200/80 rounded-xl px-3 py-1.5 sm:py-2 text-center sm:text-left shadow-2xs">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Turbidity</span>
+                                <span className="text-xs sm:text-base font-black text-slate-900">
+                                    {Number(turbidity || 0).toFixed(1)} <span className="text-[10px] font-bold text-gray-500">NTU</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <RiskAdviceCard copy={copy} lastUpdateLabel={lastUpdateLabel} isDeviceOnline={isDeviceOnline} />
             </section>
 
-            {/* HISTORY */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
+            {/* RIWAYAT PENGUKURAN SECTION */}
+            <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-5">
                     <div>
-                        <h2 className="font-bold text-aqua-text text-xl">Riwayat Pengukuran</h2>
-                        <p className="text-xs text-aqua-text-muted mt-0.5 font-medium">
-                            Maksimal 15 baris per halaman
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-aqua-primary text-lg sm:text-xl">history</span>
+                            <h3 className="text-sm font-black text-aqua-text">Riwayat Pengukuran</h3>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-aqua-text-muted mt-0.5">Log data hasil pengujian kualitas air dari sensor</p>
                     </div>
-                    <span className="bg-aqua-secondary/15 text-aqua-primary px-3 py-1 rounded-full text-[10px] font-bold">LIVE</span>
+
+                    {history && history.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleClearHistory}
+                            className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 flex items-center gap-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer hover:shadow-2xs active:scale-95 shrink-0 self-start sm:self-auto"
+                            title="Hapus / Kosongkan Seluruh Riwayat Pengukuran"
+                        >
+                            <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                            <span>Hapus Riwayat</span>
+                        </button>
+                    )}
                 </div>
 
-                {currentHistoryPage.length === 0 ? (
-                    <div className="py-10 text-center">
-                        <span className="material-symbols-outlined text-gray-200 text-5xl mb-2">history</span>
-                        <p className="text-gray-400 text-xs italic">Belum ada data pengukuran</p>
+                {(!history || history.length === 0) ? (
+                    <div className="text-center py-8 sm:py-10 px-3 sm:px-4 bg-gray-50/70 rounded-xl sm:rounded-2xl border border-dashed border-gray-200 space-y-1.5 sm:space-y-2">
+                        <span className="material-symbols-outlined text-2xl sm:text-3xl text-gray-300">history_toggle_off</span>
+                        <p className="text-xs font-bold text-gray-600">Riwayat Pengukuran Kosong</p>
+                        <p className="text-[10px] sm:text-[11px] text-gray-400">Belum ada data pengukuran atau riwayat baru saja dibersihkan.</p>
                     </div>
                 ) : (
                     <>
-                        <div className="divide-y divide-gray-50">
-                            {currentHistoryPage.map((r, idx) => (
-                                <button
-                                    key={r.timestamp || idx}
-                                    onClick={() => setSelectedReading(r)}
-                                    className="w-full py-3.5 flex items-center justify-between gap-4 text-left hover:bg-aqua-background/60 rounded-xl px-2 transition-colors cursor-pointer"
-                                >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.risk.color }}></span>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-bold text-aqua-text truncate">{r.risk.label}</p>
-                                            <p className="text-[10px] text-aqua-text-muted">
-                                                TDS {r.tds.toFixed(0)} ppm &middot; Turbidity {r.turbidity.toFixed(1)} NTU
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 flex-shrink-0">
-                                        <span className="text-[10px] font-bold text-aqua-text-muted">
-                                            {new Date(r.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <span className="material-symbols-outlined text-gray-300 text-base">chevron_right</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                        {(() => {
+                            const totalItems = history.length;
+                            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+                            const safePageIndex = Math.min(pageIndex, totalPages);
+                            const startIndex = (safePageIndex - 1) * ITEMS_PER_PAGE;
+                            const currentSlice = [...history].reverse().slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-                        {totalItems > ITEMS_PER_PAGE && (
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-4 border-t border-gray-100 text-xs font-medium text-gray-500">
-                                <div>
-                                    Menampilkan <span className="font-bold text-aqua-text">{startIndex + 1}</span> - <span className="font-bold text-aqua-text">{Math.min(startIndex + ITEMS_PER_PAGE, totalItems)}</span> dari <span className="font-bold text-aqua-text">{totalItems}</span> riwayat
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handlePrevPage}
-                                        disabled={pageIndex <= 1}
-                                        className="px-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer text-aqua-text flex items-center gap-1"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">chevron_left</span>
-                                        Sebelumnya
-                                    </button>
-                                    <span className="px-2 font-bold text-aqua-text text-xs">
-                                        {pageIndex} / {totalPages}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={handleNextPage}
-                                        disabled={pageIndex >= totalPages}
-                                        className="px-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer text-aqua-text flex items-center gap-1"
-                                    >
-                                        Selanjutnya
-                                        <span className="material-symbols-outlined text-sm">chevron_right</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                            return (
+                                <>
+                                    <div className="space-y-2">
+                                        {currentSlice.map((r, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => setSelectedReading(r)}
+                                                className="w-full flex items-center justify-between p-3 sm:p-3.5 bg-gray-50/80 hover:bg-gray-100 active:bg-gray-200/80 rounded-xl sm:rounded-2xl border border-gray-100 transition-all text-left cursor-pointer group gap-2.5"
+                                            >
+                                                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.risk?.color || '#2DC653' }}></span>
+                                                    <div className="min-w-0 truncate">
+                                                        <p className="text-xs sm:text-sm font-bold text-aqua-text truncate">{r.risk?.label || 'Terkonfirmasi'}</p>
+                                                        <p className="text-[10px] sm:text-[11px] text-aqua-text-muted truncate">
+                                                            TDS {Number(r.tds || 0).toFixed(0)} ppm &middot; Turbidity {Number(r.turbidity || 0).toFixed(1)} NTU
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                                    <span className="text-[10px] sm:text-[11px] font-bold text-aqua-text-muted whitespace-nowrap">
+                                                        {new Date(r.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    <span className="material-symbols-outlined text-gray-300 group-hover:text-aqua-primary transition-colors text-base">chevron_right</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {totalItems > ITEMS_PER_PAGE && (
+                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3.5 sm:pt-4 mt-3.5 sm:mt-4 border-t border-gray-100 text-[11px] sm:text-xs font-medium text-gray-500">
+                                            <div className="text-center sm:text-left">
+                                                Menampilkan <span className="font-bold text-aqua-text">{startIndex + 1}</span> - <span className="font-bold text-aqua-text">{Math.min(startIndex + ITEMS_PER_PAGE, totalItems)}</span> dari <span className="font-bold text-aqua-text">{totalItems}</span> riwayat
+                                            </div>
+                                            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPageIndex(p => Math.max(1, p - 1))}
+                                                    disabled={safePageIndex <= 1}
+                                                    className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer text-aqua-text flex items-center justify-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                                    Sebelumnya
+                                                </button>
+                                                <span className="px-2 font-bold text-aqua-text text-xs shrink-0">
+                                                    {safePageIndex} / {totalPages}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPageIndex(p => Math.min(totalPages, p + 1))}
+                                                    disabled={safePageIndex >= totalPages}
+                                                    className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer text-aqua-text flex items-center justify-center gap-1"
+                                                >
+                                                    Selanjutnya
+                                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </>
                 )}
             </div>
 
-            {/* PARAMETER DETAIL MODAL (TDS / TURBIDITY) */}
-            <MetricModal
-                activeParamModal={activeParamModal}
-                onClose={() => setActiveParamModal(null)}
-                paramDetails={paramDetails}
-                getParamStats={getParamStats}
-            />
-
             {/* DETAIL MODAL (HISTORICAL READING) */}
             {selectedReading && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-aqua-text/40 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                        <div className="bg-aqua-primary p-7 text-white relative">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-3 sm:p-4 bg-aqua-text/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+                        <div className="bg-aqua-primary p-5 sm:p-6 text-white relative">
                             <button
                                 onClick={() => setSelectedReading(null)}
-                                className="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all cursor-pointer"
+                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 flex items-center justify-center transition-all cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-sm">close</span>
                             </button>
-                            <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Detail Pengukuran</span>
-                            <h2 className="text-2xl font-black mt-1">{selectedReading.risk.label}</h2>
-                            <p className="text-[10px] text-white/60 mt-1">
-                                {new Date(selectedReading.timestamp).toLocaleDateString('id-ID', {
+                            <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">Detail Pengukuran</span>
+                            <h2 className="text-xl sm:text-2xl font-black mt-1 pr-8 leading-tight">{selectedReading.risk?.label || 'Pengukuran Kualitas Air'}</h2>
+                            <p className="text-[11px] text-white/70 mt-1">
+                                {new Date(selectedReading.timestamp || Date.now()).toLocaleDateString('id-ID', {
                                     weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
                                 })}
                             </p>
                         </div>
-                        <div className="p-7 overflow-y-auto space-y-5">
-                            <div className="grid grid-cols-3 gap-3">
+                        <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                 {[
-                                    ['opacity', 'TDS', `${selectedReading.tds.toFixed(0)} ppm`],
-                                    ['blur_on', 'Turbidity', `${selectedReading.turbidity.toFixed(1)} NTU`],
-                                    ['speed', 'ARS', selectedReading.ars],
+                                    ['opacity', 'TDS', `${Number(selectedReading.tds || 0).toFixed(0)} ppm`],
+                                    ['blur_on', 'Turbidity', `${Number(selectedReading.turbidity || 0).toFixed(1)} NTU`],
                                 ].map(([icon, label, val]) => (
-                                    <div key={label} className="bg-aqua-background border border-gray-100 p-4 rounded-2xl text-center shadow-sm">
-                                        <span className="material-symbols-outlined text-aqua-primary text-xl mb-1 block">{icon}</span>
-                                        <p className="text-[8px] font-bold text-aqua-text-muted uppercase">{label}</p>
-                                        <p className="text-sm font-black text-aqua-text">{val}</p>
+                                    <div key={label} className="bg-aqua-background border border-gray-100 p-2.5 sm:p-4 rounded-xl sm:rounded-2xl text-center shadow-xs">
+                                        <span className="material-symbols-outlined text-aqua-primary text-lg sm:text-xl mb-0.5 block">{icon}</span>
+                                        <p className="text-[8px] sm:text-[9px] font-bold text-aqua-text-muted uppercase tracking-wider">{label}</p>
+                                        <p className="text-xs sm:text-sm font-black text-aqua-text mt-0.5 truncate">{val}</p>
                                     </div>
                                 ))}
                             </div>
                             <div
-                                className="p-4 rounded-2xl text-xs font-bold leading-relaxed"
-                                style={{ backgroundColor: `${selectedReading.risk.color}14`, color: selectedReading.risk.color }}
+                                className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl text-xs font-bold leading-relaxed"
+                                style={{ backgroundColor: `${selectedReading.risk?.color || '#2DC653'}14`, color: selectedReading.risk?.color || '#2DC653' }}
                             >
                                 <p className="font-black uppercase tracking-widest text-[9px] mb-2">Rekomendasi</p>
-                                <ul className="space-y-1 list-disc list-inside">
-                                    {(riskCopy[selectedReading.risk.level] || riskCopy.low).recommendations.map((r) => (
+                                <ul className="space-y-1.5 list-disc list-inside text-[11px] sm:text-xs text-slate-700">
+                                    {(riskCopy[selectedReading.risk?.level] || riskCopy.low).recommendations.map((r) => (
                                         <li key={r}>{r}</li>
                                     ))}
                                 </ul>
                             </div>
                         </div>
-                        <div className="p-5 bg-aqua-background flex gap-3">
+                        <div className="p-4 sm:p-5 bg-aqua-background border-t border-gray-100 flex gap-3">
                             <button
                                 onClick={() => setSelectedReading(null)}
-                                className="flex-1 py-3 bg-aqua-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-aqua-primary-hover transition-all cursor-pointer"
+                                className="flex-1 py-2.5 sm:py-3 bg-aqua-primary text-white rounded-xl sm:rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-aqua-primary-hover active:scale-98 transition-all cursor-pointer shadow-xs"
                             >
                                 Tutup
                             </button>
