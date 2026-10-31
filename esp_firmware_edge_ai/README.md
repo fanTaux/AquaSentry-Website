@@ -83,16 +83,16 @@ AP_PASSWORD=12345678
 3. Pilih Wi-Fi router Anda, masukkan password, lalu klik **"Hubungkan"**.
 4. ESP32 akan memverifikasi koneksi dan menampilkan alamat IP yang didapat (misal `192.168.1.9`).
 
-### 3. Menjalankan Python Injector & Live Viewer
+### 3. Menjalankan Modul Lihat Data & Live Viewer
 
 Install dependensi Python terlebih dahulu:
 ```bash
-pip install -r python_injector/requirements.txt
+pip install -r lihat_data/requirements.txt
 ```
 
 #### Opsi A: Melalui Wi-Fi Lokal (TCP Port 8080)
 ```bash
-python python_injector/live_viewer.py
+python lihat_data/live_viewer.py
 ```
 - Pilih preset pengujian: `[1] LOW`, `[2] MEDIUM`, `[3] HIGH`.
 - Tekan push button di ESP32 untuk memulai hitung mundur 30 detik.
@@ -100,7 +100,7 @@ python python_injector/live_viewer.py
 
 #### Opsi B: Melalui HiveMQ Cloud MQTT (Jarak Jauh via Internet)
 ```bash
-python python_injector/mqtt_viewer.py
+python lihat_data/mqtt_viewer.py
 ```
 - Menghubungkan secara terenkripsi TLS (Port 8883) ke HiveMQ Cloud.
-- Anda dapat menginjeksi preset, memulai tes (`S`), dan membatalkan tes (`C`) dari mana saja di seluruh dunia!
+- Anda dapat memilih opsi data, memulai tes (`S`), dan membatalkan tes (`C`) dari mana saja di seluruh dunia!

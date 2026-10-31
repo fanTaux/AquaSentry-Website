@@ -1,12 +1,12 @@
 """
 =============================================================================
-AQUASENTRY - HIVEMQ CLOUD MQTT LIVE VIEWER & OPERATOR ASSISTANT
+AQUASENTRY - HIVEMQ CLOUD MQTT LIVE DATA VIEWER
 =============================================================================
 Fitur:
 1. Menghubungkan ke Broker HiveMQ Cloud Serverless (Port 8883 TLS).
 2. Memantau telemetri real-time (TDS, Turbidity, Prediksi Edge AI).
 3. Menampilkan hasil klasifikasi 30 detik (LOW, MEDIUM, HIGH).
-4. Mengirim perintah jarak jauh (Preset Injeksi, Start Uji, Cancel Uji).
+4. Mengirim perintah jarak jauh (Pilih Opsi Data, Start Uji, Cancel Uji).
 =============================================================================
 """
 
