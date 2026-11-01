@@ -1,19 +1,19 @@
 @echo off
-chcp 65001 >nul
 title AquaSentry - Web Platform Launcher
 color 0B
 
 echo ===============================================================================
-echo                🌊 AQUASENTRY - WEB PLATFORM LAUNCHER 🌊
+echo                    AQUASENTRY - WEB PLATFORM LAUNCHER
 echo ===============================================================================
 echo.
 echo Menyiapkan lingkungan dan memeriksa dependensi...
 echo.
 
-:: Pindah ke folder script saat ini
-cd /d "%~dp0"
+REM Dapatkan path folder proyek tanpa trailing backslash
+set "PROJECT_DIR=%~dp0"
+if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
 
-:: Cek Python
+REM Cek Python
 where python >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
@@ -24,7 +24,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Cek Node / NPM
+REM Cek Node / NPM
 where npm >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
@@ -35,24 +35,30 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [✓] Python & Node.js terdeteksi.
+echo [OK] Python dan Node.js terdeteksi.
 echo.
+
 echo [1/3] Menjalankan Backend FastAPI (Port 8000)...
-start "AquaSentry - Backend (FastAPI)" cmd /k "cd /d "%~dp0backend" && title AquaSentry Backend && python app.py"
+cd /d "%PROJECT_DIR%\backend"
+start "AquaSentry Backend" cmd /k "title AquaSentry Backend && python app.py"
 
 echo [2/3] Menjalankan Frontend React Vite (Port 5173)...
-start "AquaSentry - Frontend (React)" cmd /k "cd /d "%~dp0my-react-app" && title AquaSentry Frontend && npm run dev"
+cd /d "%PROJECT_DIR%\my-react-app"
+start "AquaSentry Frontend" cmd /k "title AquaSentry Frontend && npm run dev"
+
+REM Kembali ke direktori proyek utama
+cd /d "%PROJECT_DIR%"
 
 echo.
 echo [3/3] Menunggu 4 detik agar server siap sebelum membuka browser...
 timeout /t 4 /nobreak >nul
 
-echo [✓] Membuka Dashboard AquaSentry di browser...
+echo [OK] Membuka Dashboard AquaSentry di browser...
 start http://localhost:5173
 
 echo.
 echo ===============================================================================
-echo   🎉 WEBSITE AQUASENTRY BERHASIL DIJALANKAN!
+echo   WEBSITE AQUASENTRY BERHASIL DIJALANKAN!
 echo ===============================================================================
 echo   - Frontend Web  : http://localhost:5173
 echo   - Backend Docs  : http://127.0.0.1:8000/docs
