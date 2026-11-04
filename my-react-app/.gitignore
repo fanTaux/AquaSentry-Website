@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local screenshots produced by the Preview integration smoke test
+tests/artifacts/

@@ -1,0 +1,209 @@
+/* Keep every rule inside Preview: no resets, root variables, or global headings. */
+.aquasentry-preview {
+  --blue: #0077b6;
+  --ink: #023047;
+  --muted: #64748b;
+  --line: #e3eaf0;
+  color: var(--ink);
+  font-family: inherit;
+  min-width: 0;
+}
+.aquasentry-preview button, .aquasentry-preview input { font: inherit; }
+.aquasentry-preview button { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color .16s, background-color .16s, border-color .16s; }
+.aquasentry-preview button:disabled { cursor: not-allowed; opacity: .48; }
+.aquasentry-preview button:focus-visible, .aquasentry-preview input:focus-visible, .aquasentry-preview [tabindex]:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.aquasentry-preview button svg { flex-shrink: 0; }
+.aquasentry-preview button:active:not(:disabled) { filter: brightness(.94); }
+.aquasentry-preview .page-intro { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.aquasentry-preview h1 { font-size: clamp(24px, 2.6vw, 34px); line-height: 1.25; font-weight: 800; letter-spacing: -.04em; margin: 0 0 8px; }
+.aquasentry-preview .page-intro p { font-size: 13px; line-height: 1.8; margin: 0; color: var(--muted); max-width: 65ch; }
+.aquasentry-preview .guide-button { min-height: 44px; border: 1px solid #dce5ed; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; font-size: 12px; font-weight: 600; background: white; color: #375369; flex-shrink: 0; }
+.aquasentry-preview .guide-button:hover { background: #eff7fc; border-color: #b7d9eb; }
+.aquasentry-preview .explorer-layout { display: grid; grid-template-columns: minmax(0, 1fr) 344px; gap: 20px; align-items: start; }
+.aquasentry-preview .viewer { height: 720px; min-width: 0; position: relative; background-color: #eef5f8; background-image: radial-gradient(#c5d7e1 .7px, transparent .7px); background-size: 22px 22px; border: 1px solid #dce7ee; border-radius: 20px; isolation: isolate; overflow: hidden; }
+.aquasentry-preview .viewer::before { content: ''; pointer-events: none; position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 40%, #fff9, #fff0 70%); z-index: -1; }
+.aquasentry-preview .stage-topbar { position: absolute; z-index: 30; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; gap: 8px; align-items: center; pointer-events: none; }
+.aquasentry-preview .stage-topbar > * { pointer-events: auto; }
+.aquasentry-preview .mode-switch { display: flex; padding: 4px; gap: 3px; border: 1px solid #dde6ec; background: #fff; border-radius: 12px; }
+.aquasentry-preview .mode-switch > button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; font-size: 11px; font-weight: 700; padding: 8px 12px; background: white; color: #5f7284; border: 0; border-radius: 8px; }
+.aquasentry-preview .mode-switch > button.active { color: var(--blue); background: #eaf5fc; }
+.aquasentry-preview .mode-switch > button:hover:not(.active) { background: #f5f8fa; }
+.aquasentry-preview .label-toggle { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; font-size: 11px; font-weight: 600; color: #526e83; border: 1px solid #dae5ed; background: #ffffffef; padding: 10px 12px; border-radius: 10px; }
+.aquasentry-preview .label-toggle:hover, .aquasentry-preview .label-toggle.active { background: #e7f4fc; color: var(--blue); border-color: #b5d7ea; }
+.aquasentry-preview .canvas-region { position: absolute; inset: 60px 0 122px; outline-offset: -5px !important; }
+.aquasentry-preview .canvas-region > div { touch-action: none; }
+.aquasentry-preview .scene-caption { position: absolute; top: 88px; left: 24px; z-index: 1; display: flex; align-items: center; gap: 7px; font-size: 10px; color: #526e83; pointer-events: none; }
+.aquasentry-preview .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #a2acb5; }
+.aquasentry-preview .status-dot.ready { background: #168a9c; }
+.aquasentry-preview .caption-divider { height: 9px; width: 1px; background: #beced8; margin: 0 2px; }
+.aquasentry-preview .camera-tools { position: absolute; z-index: 30; right: 16px; top: 50%; transform: translateY(-50%); background: white; border: 1px solid #dfe8ee; border-radius: 12px; padding: 3px; display: flex; flex-direction: column; }
+.aquasentry-preview .camera-tools > button { display: grid; place-items: center; width: 44px; height: 44px; color: #526e83; border-radius: 8px; background: white; border: 0; }
+.aquasentry-preview .camera-tools > button:hover { background: #edf6fb; color: var(--blue); }
+.aquasentry-preview .camera-tools > span { height: 1px; background: var(--line); margin: 3px 4px; }
+.aquasentry-preview .view-presets { position: absolute; left: 20px; bottom: 164px; display: flex; gap: 2px; padding: 3px; background: #ffffffeb; border: 1px solid #dce6ec; border-radius: 10px; z-index: 25; }
+.aquasentry-preview .view-presets > button { min-height: 40px; font-size: 10px; font-weight: 600; border: 0; background: transparent; color: #526e83; padding: 8px 10px; border-radius: 6px; }
+.aquasentry-preview .view-presets > button.active { background: #e6eff6; color: #294d67; }
+.aquasentry-preview .view-presets > button:hover { color: var(--blue); background: #edf6fb; }
+.aquasentry-preview .explosion-control { position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); width: min(84%, 520px); padding: 16px 20px; background: #ffffffed; border: 1px solid #dae6ed; border-radius: 14px; box-shadow: 0 6px 22px #26435c08; z-index: 30; }
+.aquasentry-preview .explosion-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.aquasentry-preview .explosion-heading > label { font-size: 11px; font-weight: 700; color: #36526b; }
+.aquasentry-preview .explosion-heading > output { font-size: 14px; font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; }
+.aquasentry-preview .explosion-heading > output span { margin-left: 1px; font-size: 10px; font-weight: 600; }
+.aquasentry-preview input[type='range'] { display: block; width: 100%; appearance: none; -webkit-appearance: none; height: 6px; border-radius: 5px; margin: 19px 0 13px; cursor: pointer; background: linear-gradient(to right, var(--blue) var(--progress), #dfeaf1 var(--progress)); }
+.aquasentry-preview input[type='range']::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; height: 22px; width: 22px; background: white; border: 5px solid var(--blue); border-radius: 50%; box-shadow: 0 0 0 3px white; }
+.aquasentry-preview input[type='range']::-moz-range-thumb { height: 12px; width: 12px; background: white; border: 5px solid var(--blue); border-radius: 50%; }
+.aquasentry-preview .range-labels { display: flex; justify-content: space-between; font-size: 10px; color: #526e83; }
+.aquasentry-preview .viewer-hint { position: absolute; bottom: 18px; left: 10px; right: 10px; display: flex; gap: 7px; align-items: center; justify-content: center; color: #526e83; font-size: 10px; }
+.aquasentry-preview .hint-dot { width: 2px; height: 2px; margin: 0 3px; border-radius: 50%; background: #94a9b8; }
+.aquasentry-preview .model-label { font-family: inherit; position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 5px; border: 1px solid #c4d8e4; background: #fffffff2; color: #375e78; font-size: 10px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 6px #28415607; }
+.aquasentry-preview .model-label.is-selected { color: white; border-color: var(--blue); background: var(--blue); }
+.aquasentry-preview .label-pin { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #00a6e1; }
+.aquasentry-preview .model-label.is-selected .label-pin { background: white; }
+.aquasentry-preview .component-panel { min-width: 0; border: 1px solid #e1e8ef; border-radius: 20px; background: white; height: 720px; display: flex; flex-direction: column; overflow: hidden; }
+.aquasentry-preview .panel-heading { padding: 22px 20px 16px; }
+.aquasentry-preview .panel-heading h2 { font-size: 15px; font-weight: 800; letter-spacing: -.4px; display: flex; gap: 9px; align-items: center; margin: 0 0 6px; }
+.aquasentry-preview .panel-heading h2 > span { color: #4f7893; font-size: 11px; background: #ecf3f8; border-radius: 5px; padding: 3px 6px; letter-spacing: 0; font-weight: 600; }
+.aquasentry-preview .panel-heading p { font-size: 11px; color: var(--muted); margin: 0; }
+.aquasentry-preview .search-field { display: flex; align-items: center; gap: 9px; border: 1px solid #e2e9ef; background: #fafcfd; color: #64748b; border-radius: 10px; margin: 0 20px 14px; padding: 0 10px; }
+.aquasentry-preview .search-field > input { width: 100%; min-width: 0; padding: 12px 0; background: transparent; font-size: 12px; color: #3b5369; border: 0; outline: 0; }
+.aquasentry-preview .search-field:focus-within { outline: 2px solid #76b9db; outline-offset: 1px; }
+.aquasentry-preview .search-field > input:focus-visible { outline: 0; }
+.aquasentry-preview .search-field > input::placeholder { color: #64748b; }
+.aquasentry-preview .search-field > input::-webkit-search-cancel-button { display: none; }
+.aquasentry-preview .search-field > button { display: grid; place-items: center; width: 30px; height: 36px; border: 0; background: transparent; }
+.aquasentry-preview .category-tabs { display: flex; gap: 4px; padding: 0 20px 14px; flex-wrap: wrap; border-bottom: 1px solid #edf1f5; }
+.aquasentry-preview .category-tabs > button { min-height: 36px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #526e83; font-size: 10px; font-weight: 600; padding: 6px 8px; }
+.aquasentry-preview .category-tabs > button.active { color: var(--blue); background: #eaf5fc; border-color: #d0e9f6; }
+.aquasentry-preview .category-tabs > button:hover { color: var(--blue); background: #f0f7fb; }
+.aquasentry-preview .list-summary { padding: 13px 20px 9px; color: #526e83; display: flex; justify-content: space-between; align-items: center; font-size: 10px; gap: 7px; }
+.aquasentry-preview .list-summary > .list-tip { font-size: 9px; }
+.aquasentry-preview .list-summary > button { background: none; border: 0; color: var(--blue); font-size: 10px; font-weight: 700; padding: 3px 0; }
+.aquasentry-preview .component-list { list-style: none; margin: 0; padding: 0 9px 10px; flex: 1; min-height: 135px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbdbe6 transparent; }
+.aquasentry-preview .component-row { display: flex; align-items: center; border: 1px solid transparent; border-radius: 10px; margin: 2px 0; }
+.aquasentry-preview .component-row.selected { background: #edf7fe; border-color: #c9e7fa; }
+.aquasentry-preview .component-row:hover:not(.selected) { background: #f6f9fc; }
+.aquasentry-preview .part-select { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; text-align: left; padding: 9px; background: transparent; border: 0; border-radius: 8px; }
+.aquasentry-preview .part-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; background: color-mix(in srgb, var(--part-color) 9%, white); color: color-mix(in srgb, var(--part-color) 75%, #17344e); flex-shrink: 0; border: 1px solid color-mix(in srgb, var(--part-color) 12%, white); }
+.aquasentry-preview .part-name { min-width: 0; flex: 1; }
+.aquasentry-preview .part-name > strong { display: block; font-size: 11px; font-weight: 700; color: #344e65; line-height: 1.6; }
+.aquasentry-preview .part-name > small { display: block; color: #64748b; font-size: 10px; margin-top: 1px; }
+.aquasentry-preview .part-select > svg { color: #64748b; flex-shrink: 0; }
+.aquasentry-preview .part-visibility { border: 0; background: transparent; width: 44px; height: 44px; display: grid; place-items: center; color: #64748b; margin-right: 3px; border-radius: 7px; flex-shrink: 0; }
+.aquasentry-preview .part-visibility:hover { color: var(--blue); background: #e2f1fa; }
+.aquasentry-preview .is-hidden .part-icon { opacity: .4; }
+.aquasentry-preview .is-hidden .part-name > strong { color: #64748b; }
+.aquasentry-preview .part-detail { flex-shrink: 0; border-top: 1px solid #e4edf3; padding: 18px 20px; background: #f8fbfd; }
+.aquasentry-preview .detail-intro { display: flex; gap: 12px; align-items: flex-start; }
+.aquasentry-preview .intro-icon { display: grid; place-items: center; width: 39px; height: 39px; flex-shrink: 0; background: #eaf4fb; color: #1586bd; border: 1px solid #daebf5; border-radius: 10px; }
+.aquasentry-preview .detail-intro h3 { font-size: 12px; font-weight: 700; margin: 1px 0 5px; }
+.aquasentry-preview .detail-intro p { color: var(--muted); font-size: 11px; line-height: 1.8; margin: 0; }
+.aquasentry-preview .has-selection { padding-top: 10px; }
+.aquasentry-preview .detail-heading { display: flex; align-items: center; justify-content: space-between; }
+.aquasentry-preview .detail-category { color: var(--blue); font-size: 11px; font-weight: 600; }
+.aquasentry-preview .detail-heading > button { display: grid; place-items: center; color: #64748b; border: 0; background: transparent; border-radius: 6px; height: 36px; width: 36px; }
+.aquasentry-preview .detail-heading > button:hover { background: #e4f0f7; color: #27637e; }
+.aquasentry-preview .part-detail > h3 { font-size: 17px; font-weight: 800; letter-spacing: -.4px; margin: 0 0 8px; }
+.aquasentry-preview .part-detail > p { font-size: 11px; line-height: 1.8; color: #526e83; margin: 0 0 12px; }
+.aquasentry-preview .part-detail > dl { margin: 0 0 12px; }
+.aquasentry-preview .part-detail > dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; margin: 7px 0; }
+.aquasentry-preview .part-detail dt { color: var(--muted); }
+.aquasentry-preview .part-detail dd { text-align: right; color: #3f5d74; margin: 0; font-weight: 600; }
+.aquasentry-preview .focus-button { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #cbe5f4; background: #e8f4fc; color: var(--blue); font-size: 11px; font-weight: 700; border-radius: 9px; display: flex; align-items: center; gap: 7px; }
+.aquasentry-preview .focus-button > svg:last-child { margin-left: auto; }
+.aquasentry-preview .focus-button:hover:not(:disabled) { background: #d9edf9; border-color: #a4d6f1; }
+.aquasentry-preview .part-detail > .detail-note { font-size: 10px; line-height: 1.7; color: var(--muted); margin: 9px 0 0; }
+.aquasentry-preview .empty-search { text-align: center; padding: 30px 10px; color: var(--muted); }
+.aquasentry-preview .empty-search > svg { margin: 0 auto 12px; }
+.aquasentry-preview .empty-search strong { display: block; font-size: 13px; color: #3a5871; }
+.aquasentry-preview .empty-search p { font-size: 11px; line-height: 1.8; margin: 8px 0; }
+.aquasentry-preview .empty-search button { min-height: 44px; font-size: 11px; color: var(--blue); font-weight: 700; border: 0; padding: 8px 12px; background: #eaf4fb; border-radius: 7px; }
+.aquasentry-preview .illustration-note { display: flex; align-items: flex-start; gap: 9px; margin: 18px 0; color: var(--muted); }
+.aquasentry-preview .illustration-note > svg { flex-shrink: 0; margin-top: 1px; }
+.aquasentry-preview .illustration-note > p { font-size: 11px; line-height: 1.8; margin: 0; max-width: 100ch; }
+.aquasentry-preview .preview-footer { border-top: 1px solid var(--line); padding: 18px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.aquasentry-preview .guide-dialog { border: 1px solid #d5e4ef; border-radius: 20px; padding: 0; margin: auto; color: var(--ink); width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; box-shadow: 0 25px 100px #0d354238; }
+.aquasentry-preview .guide-dialog::backdrop { background: #12394f80; backdrop-filter: blur(4px); }
+.aquasentry-preview .guide-content { padding: 30px; }
+.aquasentry-preview .guide-dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.aquasentry-preview .icon-button { width: 44px; height: 44px; border: 0; border-radius: 10px; color: #526e83; display: grid; place-items: center; background: #f1f6f9; }
+.aquasentry-preview .guide-content h2 { font-size: 26px; font-weight: 800; letter-spacing: -.04em; line-height: 1.3; margin: 0 0 13px; }
+.aquasentry-preview .guide-lead { font-size: 13px; line-height: 1.9; color: #526e83; margin-bottom: 22px; }
+.aquasentry-preview .guide-steps { margin: 0; }
+.aquasentry-preview .guide-steps > div { margin-bottom: 19px; }
+.aquasentry-preview .guide-steps dt { font-size: 13px; display: flex; gap: 10px; align-items: center; font-weight: 700; margin-bottom: 6px; }
+.aquasentry-preview .guide-steps dt > svg { color: var(--blue); width: 19px; flex-shrink: 0; }
+.aquasentry-preview .guide-steps dd { margin: 0 0 0 29px; color: #526e83; font-size: 12px; line-height: 1.9; }
+.aquasentry-preview .keyboard-guide { background: #f2f8fc; border-radius: 10px; padding: 15px; margin: 22px 0 15px; }
+.aquasentry-preview .keyboard-guide strong { font-size: 12px; font-weight: 700; }
+.aquasentry-preview .keyboard-guide p { font-size: 11px; color: #526e83; line-height: 2.1; margin: 6px 0 0; }
+.aquasentry-preview kbd { border: 1px solid #ccdae5; border-bottom-width: 2px; font: inherit; padding: 1px 5px; color: #3e617b; background: white; border-radius: 3px; }
+.aquasentry-preview .guide-disclaimer { font-size: 11px; line-height: 1.9; color: var(--muted); }
+.aquasentry-preview .button { min-height: 44px; padding: 12px 16px; border: 1px solid transparent; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 12px; font-weight: 700; }
+.aquasentry-preview .button.primary { background: var(--blue); color: white; }
+.aquasentry-preview .button.primary:hover { background: #005f8f; }
+.aquasentry-preview .guide-content > .button.primary { width: 100%; margin-top: 22px; }
+.aquasentry-preview .button.secondary { border-color: #ccdfec; background: white; color: var(--blue); }
+.aquasentry-preview .scene-loading, .aquasentry-preview .viewer-placeholder, .aquasentry-preview .scene-fallback { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: #526e83; padding: 30px; text-align: center; font-size: 12px; }
+.aquasentry-preview .scene-loading, .aquasentry-preview .canvas-region .scene-fallback { height: 100%; }
+.aquasentry-preview .canvas-region .scene-fallback { background: transparent; border: 0; }
+.aquasentry-preview .scene-fallback > h3 { font-size: 18px; font-weight: 700; margin: 0; }
+.aquasentry-preview .scene-fallback > p { max-width: 360px; font-size: 12px; line-height: 1.9; margin: 0; }
+.aquasentry-preview .loader { display: block; width: 28px; height: 28px; border: 2px solid #cce3f0; border-top-color: var(--blue); border-radius: 50%; animation: aquasentry-preview-spin 1s linear infinite; }
+@keyframes aquasentry-preview-spin { to { transform: rotate(360deg); } }
+@media (max-width: 1199px) {
+  .aquasentry-preview .explorer-layout { grid-template-columns: minmax(0, 1fr) 312px; gap: 14px; }
+  .aquasentry-preview .stage-topbar { left: 12px; right: 12px; top: 14px; }
+  .aquasentry-preview .label-toggle > span { display: none; }
+  .aquasentry-preview .camera-tools { right: 10px; }
+  .aquasentry-preview .scene-caption { left: 18px; font-size: 9px; }
+  .aquasentry-preview .viewer-hint { gap: 5px; font-size: 9px; }
+}
+@media (max-width: 900px) {
+  .aquasentry-preview .explorer-layout { grid-template-columns: minmax(0, 1fr); }
+  .aquasentry-preview .viewer { height: 640px; }
+  .aquasentry-preview .component-panel { height: auto; }
+  .aquasentry-preview .component-list { max-height: 350px; flex: auto; }
+  .aquasentry-preview .category-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .aquasentry-preview .category-tabs > button { min-height: 44px; padding: 8px 12px; white-space: nowrap; font-size: 11px; }
+  .aquasentry-preview .part-name > strong { font-size: 12px; }
+  .aquasentry-preview .part-select { padding: 11px; }
+  .aquasentry-preview .part-detail > p { font-size: 12px; }
+  .aquasentry-preview .detail-intro h3 { font-size: 13px; }
+  .aquasentry-preview .label-toggle > span { display: inline; }
+}
+@media (max-width: 540px) {
+  .aquasentry-preview .page-intro { align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .aquasentry-preview h1 { font-size: 24px; }
+  .aquasentry-preview .page-intro p { font-size: 11px; }
+  .aquasentry-preview .page-intro .guide-button { padding: 10px; font-size: 10px; gap: 5px; }
+  .aquasentry-preview .viewer { height: 568px; border-radius: 16px; }
+  .aquasentry-preview .stage-topbar { left: 10px; right: 10px; top: 12px; }
+  .aquasentry-preview .mode-switch { padding: 3px; }
+  .aquasentry-preview .mode-switch > button { padding: 8px; font-size: 10px; gap: 5px; }
+  .aquasentry-preview .label-toggle > span { display: none; }
+  .aquasentry-preview .scene-caption { top: 78px; left: 14px; gap: 5px; font-size: 8px; }
+  .aquasentry-preview .canvas-region { inset: 65px 0 131px; }
+  .aquasentry-preview .camera-tools { right: 8px; top: 47%; padding: 2px; }
+  .aquasentry-preview .camera-tools > button { width: 40px; height: 44px; }
+  .aquasentry-preview .camera-tools > button svg { width: 18px; }
+  .aquasentry-preview .view-presets { bottom: 168px; left: 12px; }
+  .aquasentry-preview .view-presets > button { min-height: 40px; padding: 8px; font-size: 9px; }
+  .aquasentry-preview .explosion-control { width: calc(100% - 24px); padding: 14px 16px; bottom: 44px; }
+  .aquasentry-preview .viewer-hint { font-size: 8px; gap: 4px; bottom: 16px; }
+  .aquasentry-preview .viewer-hint > svg { display: none; }
+  .aquasentry-preview .hint-dot { margin: 0; }
+  .aquasentry-preview .panel-heading { padding: 20px 18px 15px; }
+  .aquasentry-preview .panel-heading h2 { font-size: 16px; }
+  .aquasentry-preview .search-field { margin-left: 18px; margin-right: 18px; }
+  .aquasentry-preview .search-field > input { font-size: 16px; }
+  .aquasentry-preview .category-tabs { padding-left: 18px; padding-right: 18px; }
+  .aquasentry-preview .part-detail { padding: 18px; }
+  .aquasentry-preview .part-detail > h3 { font-size: 19px; }
+  .aquasentry-preview .model-label { padding: 5px 6px; font-size: 8px; gap: 4px; }
+  .aquasentry-preview .guide-content { padding: 22px; }
+  .aquasentry-preview .guide-content h2 { font-size: 24px; }
+  .aquasentry-preview .preview-footer { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aquasentry-preview *, .aquasentry-preview *::before, .aquasentry-preview *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
