@@ -49,3 +49,7 @@ Thumbs.db
 # OS / Temp
 *.tmp
 *.bak
+
+# Keep Preview source files visible to Git despite the Python lib/ rule above
+!my-react-app/src/features/preview/lib/
+!my-react-app/src/features/preview/lib/model.js
