@@ -51,7 +51,7 @@ cd /d "%PROJECT_DIR%"
 
 echo.
 echo [3/3] Menunggu 4 detik agar server siap sebelum membuka browser...
-timeout /t 4 /nobreak >nul
+ping 127.0.0.1 -n 5 >nul
 
 echo [OK] Membuka Dashboard AquaSentry di browser...
 start http://localhost:5173
@@ -64,7 +64,7 @@ echo   - Frontend Web  : http://localhost:5173
 echo   - Backend Docs  : http://127.0.0.1:8000/docs
 echo.
 echo   [CATATAN PENTING]
-echo   Biarkan 2 jendela command prompt (Backend & Frontend) tetap terbuka
+echo   Biarkan 2 jendela command prompt (Backend dan Frontend) tetap terbuka
 echo   selama Anda menggunakan website. Untuk mematikan, cukup tutup kedua
 echo   jendela tersebut atau jalankan stop_website.bat.
 echo ===============================================================================
