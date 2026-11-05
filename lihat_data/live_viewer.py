@@ -1,16 +1,18 @@
 """
 =============================================================================
-AQUASENTRY - HIVEMQ CLOUD MQTT LIVE DATA VIEWER
+AQUASENTRY - PUSAT LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)
+Mendukung: Percobaan 1 (Edge AI), Percobaan 2 (Threshold), Percobaan 3 (Full Edge AI)
 =============================================================================
 Tidak memerlukan Wi-Fi yang sama! ESP32 dan Laptop berkomunikasi secara
 global melalui HiveMQ Cloud (TLS Port 8883).
 
 Fitur:
 1. Hubungkan ke Broker HiveMQ Cloud Serverless (TLS 8883) secara instan.
-2. Memilih Opsi Data (Opsi 1, Opsi 2, Opsi 3, Kustom) langsung dari laptop.
-3. Mendeteksi trigger pengujian baik dari tombol fisik ESP32 (D32) maupun dari Cloud.
-4. Menampilkan hitung mundur 30 detik secara realtime beserta pembacaan sensor.
-5. Menampilkan hasil akhir konsensus Edge AI dan rata-rata TDS/Turbiditas 30 detik.
+2. Mendeteksi identitas unik ESP32 (Device ID & Experiment ID: Percobaan 1, 2, atau 3).
+3. Memilih Opsi Data (Opsi 1, Opsi 2, Opsi 3, Kustom) langsung dari laptop.
+4. Mendeteksi trigger pengujian baik dari tombol fisik ESP32 (D32) maupun dari Cloud.
+5. Menampilkan telemetri sensor TDS dan Turbiditas secara realtime.
+6. Menampilkan hasil akhir konsensus Edge AI / Klasifikasi lokal beserta rinciannya.
 =============================================================================
 """
 
@@ -40,6 +42,9 @@ state = {
     "esp32_online": False,
     "last_seen_esp32": 0,
     "status": "Menunggu ESP32...",
+    "device_id": "ESP32",
+    "experiment_id": "Percobaan 1 / 2 / 3",
+    "local_category": "",
     "preset": "LOW",
     "tds_ppm": 0.0,
     "turbidity_ntu": 0.0,
@@ -81,6 +86,17 @@ def on_message(client, userdata, msg):
         with state_lock:
             state["esp32_online"] = True
             state["last_seen_esp32"] = time.time()
+
+            if "device_id" in data:
+                state["device_id"] = str(data["device_id"])
+            elif "device" in data:
+                state["device_id"] = str(data["device"])
+
+            if "experiment_id" in data:
+                state["experiment_id"] = str(data["experiment_id"])
+
+            if "local_category" in data:
+                state["local_category"] = str(data["local_category"])
 
             if msg.topic == TOPIC_STATUS:
                 status_val = data.get("status", "")
@@ -129,12 +145,12 @@ def send_command(cmd: str):
     return False
 
 def monitor_testing_session():
-    """Memantau jalannya pengujian 30 detik secara realtime."""
+    """Memantau jalannya pengujian sensor/AI secara realtime."""
     last_sec = -1
-    print("\n" + "=" * 70)
-    print(" ⏳ [PENGUJIAN 30 DETIK BERLANGSUNG - LIVE DARI HIVEMQ CLOUD]")
+    print("\n" + "=" * 75)
+    print(" ⏳ [PENGUJIAN BERLANGSUNG - LIVE DARI HIVEMQ CLOUD]")
     print(" Tekan Ctrl+C atau ketik 'C' untuk membatalkan pengujian.")
-    print("=" * 70)
+    print("=" * 75)
 
     while True:
         with state_lock:
@@ -151,15 +167,18 @@ def monitor_testing_session():
             v_low = state["vote_low"]
             v_med = state["vote_med"]
             v_high = state["vote_high"]
+            dev_id = state["device_id"]
+            exp_id = state["experiment_id"]
+            local_cat = state["local_category"]
 
         if cancelled:
             with state_lock:
                 state["test_just_cancelled"] = False
                 state["test_just_started"] = False
-            print("\n\n" + "=" * 70)
-            print(" 🛑 [DIBATALKAN] Pengujian 30 detik dibatalkan!")
+            print("\n\n" + "=" * 75)
+            print(" 🛑 [DIBATALKAN] Pengujian dibatalkan!")
             print(" Status PCB : LED Hasil Padam & LED Biru (D33) Solid ON.")
-            print("=" * 70)
+            print("=" * 75)
             time.sleep(1.0)
             break
 
@@ -168,20 +187,23 @@ def monitor_testing_session():
                 state["test_just_finished"] = False
                 state["test_just_started"] = False
 
-            print("\n\n" + "=" * 70)
-            print(" 🏆 [✓ SELESAI!] PENGUJIAN 30 DETIK TELAH TUNTAS!")
-            print(f" HASIL AKHIR KONSENSUS : [{verdict.upper()}]")
-            print(f" RATA-RATA TDS (30s)   : {avg_tds:.1f} PPM")
+            cat_display = f" ({local_cat})" if local_cat else ""
+            print("\n\n" + "=" * 75)
+            print(" 🏆 [✓ SELESAI!] PENGUJIAN TELAH TUNTAS!")
+            print(f" IDENTITAS PERANGKAT  : {dev_id} | PERCOBAAN: {exp_id}")
+            print(f" HASIL AKHIR KONSENSUS : [{verdict.upper()}]{cat_display}")
+            print(f" RATA-RATA TDS         : {avg_tds:.1f} PPM")
             print(f" RATA-RATA TURBIDITAS  : {avg_turb:.1f} NTU")
-            print(f" Rincian Voting 5-Detik: Low={v_low} | Med={v_med} | High={v_high}")
+            if v_low + v_med + v_high > 0:
+                print(f" Rincian Voting Model  : Low={v_low} | Med={v_med} | High={v_high}")
             if verdict == "Low":
-                print(" Status LED Fisik PCB  : 🟢 LED HIJAU (D25) Menyala 10 Detik (Auto-Off)!")
+                print(" Status LED Fisik PCB  : 🟢 LED HIJAU (D25) Menyala (Auto-Off)")
             elif verdict == "Medium":
-                print(" Status LED Fisik PCB  : 🟡 LED KUNING (D22) Menyala 10 Detik (Auto-Off)!")
+                print(" Status LED Fisik PCB  : 🟡 LED KUNING (D22) Menyala (Auto-Off)")
             elif verdict == "High":
-                print(" Status LED Fisik PCB  : 🔴 LED MERAH (D23) Menyala 10 Detik (Auto-Off)!")
+                print(" Status LED Fisik PCB  : 🔴 LED MERAH (D23) Menyala (Auto-Off)")
             print(" Status LED Status     : 🔵 LED Biru (D33) Kembali Solid ON.")
-            print("=" * 70)
+            print("=" * 75)
             try:
                 input("\n Tekan Enter untuk kembali ke Menu Utama...")
             except (EOFError, KeyboardInterrupt):
@@ -199,7 +221,7 @@ def monitor_testing_session():
             elif ai_pred == "High":
                 led_info = "[🔴 LED Merah]"
 
-            print(f" ⏳ Waktu: {elapsed:2d}s / 30s (Sisa {sisa:2d}s) | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU => AI: {ai_pred:<8} {led_info}")
+            print(f" ⏳ Waktu: {elapsed:2d}s | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU => Status: {ai_pred:<8} {led_info}")
 
         time.sleep(0.2)
 
@@ -207,8 +229,9 @@ def main():
     global mqtt_client, stop_flag
 
     print("=" * 75)
-    print("      AQUASENTRY - MENU LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)      ")
+    print("      AQUASENTRY - PUSAT LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)      ")
     print("   Cloud Broker: " + MQTT_BROKER)
+    print("   Mendukung   : Percobaan 1, Percobaan 2, & Percobaan 3")
     print("   Bebas jaringan: Tidak perlu satu Wi-Fi dengan ESP32!")
     print("=" * 75)
 
@@ -244,7 +267,7 @@ def main():
         return
 
     print(" [✓] Tersambung ke HiveMQ Cloud (TLS 8883)!")
-    print(" [.] Menunggu sinyal detak ESP32...")
+    print(" [.] Menunggu sinyal dari ESP32...")
 
     # Cek apakah ESP32 online (timeout 3 detik)
     for _ in range(15):
@@ -261,6 +284,8 @@ def main():
                 turb = state["turbidity_ntu"]
                 is_testing = state["is_testing"]
                 started = state["test_just_started"]
+                dev_id = state["device_id"]
+                exp_id = state["experiment_id"]
 
             # Jika pengujian sedang berjalan (misal dipicu dari tombol fisik ESP32)
             if is_testing or started:
@@ -273,14 +298,15 @@ def main():
             print("                        MENU LIHAT DATA & KONTROL")
             print("=" * 75)
             print(f" [Status ESP32]         : {online_str}")
+            print(f" [Perangkat Terdeteksi] : {dev_id} ({exp_id})")
             print(f" [Data Terpilih]        : {preset} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
             print("-" * 75)
-            print(" [1] Opsi 1 (Low)")
-            print(" [2] Opsi 2 (Medium)")
-            print(" [3] Opsi 3 (High)")
+            print(" [1] Opsi 1 (Low)               -> Target Air Bersih")
+            print(" [2] Opsi 2 (Medium)            -> Target Air Sedang")
+            print(" [3] Opsi 3 (High)              -> Target Air Kotor")
             print(" [4] Opsi 4 (Kustom)            -> Input Nilai TDS & Turbiditas Bebas")
             print(" [R] Reset Sensor               -> Gunakan Pembacaan Sensor Fisik")
-            print(" [S] Start Pengujian (30 Detik) -> Mulai Sesi Pengujian")
+            print(" [S] Start Pengujian            -> Mulai Sesi Pengujian")
             print(" [C] Batalkan Pengujian         -> Hentikan Pengujian")
             print(" [W] Buka Web Hotspot Setup     -> Buka Captive Portal Wi-Fi Baru")
             print(" [Q] Keluar")
@@ -338,8 +364,7 @@ def main():
 
             elif pilihan == "s":
                 send_command("START_TEST")
-                print("\n >>> [✓ TERKIRIM] Memulai pengujian 30 detik via Cloud...")
-                # Tunggu sejenak hingga status testing_started diterima
+                print("\n >>> [✓ TERKIRIM] Memulai pengujian via Cloud...")
                 time.sleep(0.5)
                 monitor_testing_session()
 
