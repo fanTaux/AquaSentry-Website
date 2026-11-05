@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import TopNavBar from './components/TopNavBar';
+import MainNavigation from './components/MainNavigation';
 import SensorErrorBanner from './components/SensorErrorBanner';
 import DashboardMetrics from './components/DashboardMetrics';
 import LocationMap from './components/LocationMap';
@@ -8,13 +9,22 @@ import SettingsPage from './components/SettingsPage';
 import ProfilePage from './components/ProfilePage';
 import { AppProvider, useAppContext } from './context/AppContext';
 
+const PreviewPage = lazy(() => import('./features/preview/PreviewPage'));
+
 function MainApp() {
-  const { token, logout, activeDeviceId, isConnected, devices, isDeviceOnline } = useAppContext();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { token } = useAppContext();
 
   if (!token) {
     return <Login />;
   }
+
+  return <AuthenticatedApp />;
+}
+
+function AuthenticatedApp() {
+  const { logout, activeDeviceId, isConnected, devices, isDeviceOnline } = useAppContext();
+  // Unmount on logout so every new login starts at Preview, without changing auth.
+  const [activeTab, setActiveTab] = useState('preview');
 
   const formatDeviceName = (id) => {
     if (!id) return 'Tidak ada alat terhubung';
@@ -27,33 +37,17 @@ function MainApp() {
       <TopNavBar onLogout={logout} onProfileClick={() => setActiveTab('profile')} />
 
       <div className="pt-16 sm:pt-20 px-3 sm:px-6 max-w-7xl mx-auto mb-4 sm:mb-6">
-        <div className="flex justify-between items-center bg-aqua-surface p-1 sm:p-1.5 rounded-2xl sm:rounded-full border border-aqua-secondary/30 shadow-xs max-w-md mx-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'dashboard' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
-          >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">water_drop</span>
-            <span>Monitoring</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('map')}
-            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'map' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
-          >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">map</span>
-            <span>Peta Lokasi</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-widest uppercase flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-aqua-primary text-white shadow-xs' : 'text-aqua-text-muted hover:bg-aqua-background'}`}
-          >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">settings</span>
-            <span>Settings</span>
-          </button>
-        </div>
+        <MainNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
       <main className="px-3 sm:px-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-12">
-        <SensorErrorBanner />
+        {activeTab !== 'preview' && <SensorErrorBanner />}
+
+        {activeTab === 'preview' && (
+          <Suspense fallback={<div className="py-16 text-center text-sm text-aqua-text-muted" role="status">Memuat Preview AquaSentry…</div>}>
+            <PreviewPage onMonitoring={() => setActiveTab('dashboard')} />
+          </Suspense>
+        )}
 
         {activeTab === 'dashboard' && (
           <div className="animate-fade-in">
