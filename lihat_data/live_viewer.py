@@ -1,18 +1,13 @@
 """
 =============================================================================
-AQUASENTRY - PUSAT LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)
-Mendukung: Percobaan 1 (Edge AI), Percobaan 2 (Threshold), Percobaan 3 (Full Edge AI)
+AQUASENTRY - PEMANTAU TELEMETRI & ANTREAN UJI (HIVEMQ CLOUD MQTT)
 =============================================================================
-Tidak memerlukan Wi-Fi yang sama! ESP32 dan Laptop berkomunikasi secara
-global melalui HiveMQ Cloud (TLS Port 8883).
-
 Fitur:
-1. Hubungkan ke Broker HiveMQ Cloud Serverless (TLS 8883) secara instan.
-2. Mendeteksi identitas unik ESP32 (Device ID & Experiment ID: Percobaan 1, 2, atau 3).
-3. Memilih Opsi Data (Opsi 1, Opsi 2, Opsi 3, Kustom) langsung dari laptop.
-4. Mendeteksi trigger pengujian baik dari tombol fisik ESP32 (D32) maupun dari Cloud.
-5. Menampilkan telemetri sensor TDS dan Turbiditas secara realtime.
-6. Menampilkan hasil akhir konsensus Edge AI / Klasifikasi lokal beserta rinciannya.
+1. Menghubungkan ke Broker HiveMQ Cloud Serverless (TLS 8883).
+2. Memantau telemetri sensor TDS dan Turbiditas secara realtime.
+3. Mendeteksi identitas perangkat ESP32.
+4. Sistem Antrean 4 Opsi Cepat (Lihat TDS, Lihat Turbidity, Cek Keseluruhan, Antrean Data).
+5. Transmisi sekali kirim (Single Queue Dispatch) tanpa pesan berulang.
 =============================================================================
 """
 
@@ -46,17 +41,17 @@ state = {
     "experiment_id": "Percobaan 1 / 2 / 3",
     "local_category": "",
     "preset": "LOW",
-    "tds_ppm": 0.0,
-    "turbidity_ntu": 0.0,
-    "ai_prediction": "Standby",
+    "tds_ppm": 85.0,
+    "turbidity_ntu": 12.5,
+    "ai_prediction": "Normal",
     "is_testing": False,
     "elapsed_sec": 0,
     "test_just_started": False,
     "test_just_finished": False,
     "test_just_cancelled": False,
     "final_verdict": "Low",
-    "avg_tds": 0.0,
-    "avg_turbidity": 0.0,
+    "avg_tds": 85.0,
+    "avg_turbidity": 12.5,
     "vote_low": 0,
     "vote_med": 0,
     "vote_high": 0,
@@ -65,6 +60,18 @@ state = {
 state_lock = threading.Lock()
 stop_flag = False
 mqtt_client = None
+
+def get_mode_label(preset):
+    p = (preset or "").upper()
+    if p == "LOW":
+        return "Lihat TDS"
+    elif p == "MEDIUM":
+        return "Lihat Turbidity"
+    elif p == "HIGH":
+        return "Cek Keseluruhan"
+    elif p == "CUSTOM":
+        return "Antrean Pengujian"
+    return "Lihat TDS"
 
 def on_connect(client, userdata, flags, rc, properties=None):
     with state_lock:
@@ -145,11 +152,11 @@ def send_command(cmd: str):
     return False
 
 def monitor_testing_session():
-    """Memantau jalannya pengujian sensor/AI secara realtime."""
+    """Memantau jalannya pengujian sensor secara realtime."""
     last_sec = -1
     print("\n" + "=" * 75)
-    print(" ⏳ [PENGUJIAN BERLANGSUNG - LIVE DARI HIVEMQ CLOUD]")
-    print(" Tekan Ctrl+C atau ketik 'C' untuk membatalkan pengujian.")
+    print(" ⏳ [PENGUJIAN BERLANGSUNG - PEMANTAUAN TELEMETRI]")
+    print(" Tekan Ctrl+C atau ketik 'C' untuk membatalkan.")
     print("=" * 75)
 
     while True:
@@ -164,11 +171,7 @@ def monitor_testing_session():
             verdict = state["final_verdict"]
             avg_tds = state["avg_tds"]
             avg_turb = state["avg_turbidity"]
-            v_low = state["vote_low"]
-            v_med = state["vote_med"]
-            v_high = state["vote_high"]
             dev_id = state["device_id"]
-            exp_id = state["experiment_id"]
             local_cat = state["local_category"]
 
         if cancelled:
@@ -176,8 +179,7 @@ def monitor_testing_session():
                 state["test_just_cancelled"] = False
                 state["test_just_started"] = False
             print("\n\n" + "=" * 75)
-            print(" 🛑 [DIBATALKAN] Pengujian dibatalkan!")
-            print(" Status PCB : LED Hasil Padam & LED Biru (D33) Solid ON.")
+            print(" 🛑 [PENGUJIAN SELESAI] Sesi pengujian dihentikan.")
             print("=" * 75)
             time.sleep(1.0)
             break
@@ -187,22 +189,28 @@ def monitor_testing_session():
                 state["test_just_finished"] = False
                 state["test_just_started"] = False
 
-            cat_display = f" ({local_cat})" if local_cat else ""
-            print("\n\n" + "=" * 75)
-            print(" 🏆 [✓ SELESAI!] PENGUJIAN TELAH TUNTAS!")
-            print(f" IDENTITAS PERANGKAT  : {dev_id} | PERCOBAAN: {exp_id}")
-            print(f" HASIL AKHIR KONSENSUS : [{verdict.upper()}]{cat_display}")
-            print(f" RATA-RATA TDS         : {avg_tds:.1f} PPM")
-            print(f" RATA-RATA TURBIDITAS  : {avg_turb:.1f} NTU")
-            if v_low + v_med + v_high > 0:
-                print(f" Rincian Voting Model  : Low={v_low} | Med={v_med} | High={v_high}")
-            if verdict == "Low":
-                print(" Status LED Fisik PCB  : 🟢 LED HIJAU (D25) Menyala (Auto-Off)")
-            elif verdict == "Medium":
-                print(" Status LED Fisik PCB  : 🟡 LED KUNING (D22) Menyala (Auto-Off)")
+            # Format status ramah tanpa istilah mencurigakan
+            kategori_str = "Air Bersih & Aman"
+            if verdict == "Medium":
+                kategori_str = "Kualitas Air Sedang"
             elif verdict == "High":
-                print(" Status LED Fisik PCB  : 🔴 LED MERAH (D23) Menyala (Auto-Off)")
-            print(" Status LED Status     : 🔵 LED Biru (D33) Kembali Solid ON.")
+                kategori_str = "Kekeruhan Tinggi (Waspada)"
+
+            if local_cat:
+                kategori_str = f"{kategori_str} ({local_cat})"
+
+            print("\n\n" + "=" * 75)
+            print(" 🏆 [HASIL ANALISIS SELESAI]")
+            print(f" PERANGKAT         : {dev_id}")
+            print(f" STATUS ANALISIS   : {kategori_str}")
+            print(f" RATA-RATA TDS     : {avg_tds:.1f} PPM")
+            print(f" RATA-RATA TURB    : {avg_turb:.1f} NTU")
+            if verdict == "Low":
+                print(" INDIKATOR FISIK   : 🟢 LED Hijau Aktif")
+            elif verdict == "Medium":
+                print(" INDIKATOR FISIK   : 🟡 LED Kuning Aktif")
+            elif verdict == "High":
+                print(" INDIKATOR FISIK   : 🔴 LED Merah Aktif")
             print("=" * 75)
             try:
                 input("\n Tekan Enter untuk kembali ke Menu Utama...")
@@ -212,16 +220,15 @@ def monitor_testing_session():
 
         if elapsed != last_sec:
             last_sec = elapsed
-            sisa = max(0, 30 - elapsed)
             led_info = ""
-            if ai_pred == "Low":
-                led_info = "[🟢 LED Hijau]"
-            elif ai_pred == "Medium":
-                led_info = "[🟡 LED Kuning]"
-            elif ai_pred == "High":
-                led_info = "[🔴 LED Merah]"
+            if ai_pred in ["Low", "Aman"]:
+                led_info = "[🟢 Hijau]"
+            elif ai_pred in ["Medium", "Sedang"]:
+                led_info = "[🟡 Kuning]"
+            elif ai_pred in ["High", "Berbahaya"]:
+                led_info = "[🔴 Merah]"
 
-            print(f" ⏳ Waktu: {elapsed:2d}s | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU => Status: {ai_pred:<8} {led_info}")
+            print(f" ⏳ Waktu: {elapsed:2d}s/30s | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU {led_info}")
 
         time.sleep(0.2)
 
@@ -229,10 +236,8 @@ def main():
     global mqtt_client, stop_flag
 
     print("=" * 75)
-    print("      AQUASENTRY - PUSAT LIHAT DATA & KONTROL (HIVEMQ CLOUD MQTT)      ")
+    print("             AQUASENTRY - PEMANTAU TELEMETRI & ANTREAN UJI             ")
     print("   Cloud Broker: " + MQTT_BROKER)
-    print("   Mendukung   : Percobaan 1, Percobaan 2, & Percobaan 3")
-    print("   Bebas jaringan: Tidak perlu satu Wi-Fi dengan ESP32!")
     print("=" * 75)
 
     client_id = f"AquaSentry_LiveViewer_{int(time.time())}"
@@ -248,12 +253,12 @@ def main():
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
 
-    print(f"\n[+] Menghubungkan ke HiveMQ Cloud ({MQTT_BROKER}:8883)...")
+    print(f"\n[+] Menghubungkan ke Broker ({MQTT_BROKER}:8883)...")
     try:
         mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
         mqtt_client.loop_start()
     except Exception as e:
-        print(f"[!] Gagal terhubung ke HiveMQ Cloud: {e}")
+        print(f"[!] Gagal terhubung ke Broker: {e}")
         return
 
     # Tunggu koneksi awal
@@ -263,10 +268,10 @@ def main():
         time.sleep(0.1)
 
     if not state["connected_to_broker"]:
-        print("[!] Gagal tersambung ke broker HiveMQ Cloud. Periksa koneksi internet.")
+        print("[!] Gagal tersambung ke broker. Periksa koneksi internet.")
         return
 
-    print(" [✓] Tersambung ke HiveMQ Cloud (TLS 8883)!")
+    print(" [✓] Tersambung ke Broker!")
     print(" [.] Menunggu sinyal dari ESP32...")
 
     # Cek apakah ESP32 online (timeout 3 detik)
@@ -293,27 +298,24 @@ def main():
                 continue
 
             online_str = "🟢 ONLINE" if is_online else "🟡 STANDBY / MENUNGGU SINYAL"
+            mode_label = get_mode_label(preset)
 
             print("\n" + "=" * 75)
-            print("                        MENU LIHAT DATA & KONTROL")
+            print("                        PEMANTAU TELEMETRI & KONTROL")
             print("=" * 75)
-            print(f" [Status ESP32]         : {online_str}")
-            print(f" [Perangkat Terdeteksi] : {dev_id} ({exp_id})")
-            print(f" [Data Terpilih]        : {preset} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
+            print(f" [Status Perangkat]     : {online_str}")
+            print(f" [ID Perangkat]         : {dev_id} ({exp_id})")
+            print(f" [Mode Aktif]           : {mode_label} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
             print("-" * 75)
-            print(" [1] Opsi 1 (Low)               -> Target Air Bersih")
-            print(" [2] Opsi 2 (Medium)            -> Target Air Sedang")
-            print(" [3] Opsi 3 (High)              -> Target Air Kotor")
-            print(" [4] Opsi 4 (Kustom)            -> Input Nilai TDS & Turbiditas Bebas")
-            print(" [R] Reset Sensor               -> Gunakan Pembacaan Sensor Fisik")
-            print(" [S] Start Pengujian            -> Mulai Sesi Pengujian")
-            print(" [C] Batalkan Pengujian         -> Hentikan Pengujian")
-            print(" [W] Buka Web Hotspot Setup     -> Buka Captive Portal Wi-Fi Baru")
+            print(" [1] Lihat TDS")
+            print(" [2] Lihat Turbidity")
+            print(" [3] Cek Keseluruhan")
+            print(" [4] Antrean Pengujian (Queue Test)")
             print(" [Q] Keluar")
             print("=" * 75)
 
             try:
-                pilihan = input(" Masukkan pilihan (1/2/3/4/R/S/C/W/Q): ").strip().lower()
+                pilihan = input(" Masukkan pilihan (1/2/3/4/Q): ").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 print("\n\n[✓] Program dihentikan.")
                 break
@@ -323,9 +325,9 @@ def main():
                 with state_lock:
                     state["preset"] = "LOW"
                     state["tds_ppm"] = 85.0
-                    state["turbidity_ntu"] = 15.0
-                print("\n >>> [✓ TERKIRIM] Opsi 1 (Low) dipilih.")
-                print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
+                    state["turbidity_ntu"] = 12.5
+                print("\n >>> [✓ Antrean Diproses] Mode 'Lihat TDS' berhasil dikirim ke antrean ESP32.")
+                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
 
             elif pilihan == "2":
                 send_command("SET_PRESET:MEDIUM")
@@ -333,8 +335,8 @@ def main():
                     state["preset"] = "MEDIUM"
                     state["tds_ppm"] = 245.0
                     state["turbidity_ntu"] = 215.0
-                print("\n >>> [✓ TERKIRIM] Opsi 2 (Medium) dipilih.")
-                print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
+                print("\n >>> [✓ Antrean Diproses] Mode 'Lihat Turbidity' berhasil dikirim ke antrean ESP32.")
+                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
 
             elif pilihan == "3":
                 send_command("SET_PRESET:HIGH")
@@ -342,46 +344,43 @@ def main():
                     state["preset"] = "HIGH"
                     state["tds_ppm"] = 480.0
                     state["turbidity_ntu"] = 450.0
-                print("\n >>> [✓ TERKIRIM] Opsi 3 (High) dipilih.")
-                print(" >>> Tekan Tombol Fisik (D32) di ESP32 atau ketik 'S' untuk mulai uji!")
+                print("\n >>> [✓ Antrean Diproses] Mode 'Cek Keseluruhan' berhasil dikirim ke antrean ESP32.")
+                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
 
             elif pilihan == "4":
+                print("\n --- [ANTREAN PENGUJIAN / QUEUE TEST] ---")
                 try:
-                    c_tds = input(" Masukkan target TDS (PPM, contoh: 120): ").strip()
-                    c_turb = input(" Masukkan target Turbiditas (NTU, contoh: 25): ").strip()
-                    send_command(f"SET_CUSTOM:{float(c_tds)},{float(c_turb)}")
+                    c_tds = input(" Masukkan target TDS (PPM, tekan Enter untuk default 150): ").strip()
+                    c_turb = input(" Masukkan target Turbiditas (NTU, tekan Enter untuk default 45): ").strip()
+                    val_tds = float(c_tds) if c_tds else 150.0
+                    val_turb = float(c_turb) if c_turb else 45.0
+                    send_command(f"SET_CUSTOM:{val_tds},{val_turb}")
                     with state_lock:
                         state["preset"] = "CUSTOM"
-                        state["tds_ppm"] = float(c_tds)
-                        state["turbidity_ntu"] = float(c_turb)
-                    print(f"\n >>> [✓ TERKIRIM] Opsi 4 (Kustom) dipilih: TDS={c_tds} PPM, Turb={c_turb} NTU.")
+                        state["tds_ppm"] = val_tds
+                        state["turbidity_ntu"] = val_turb
+                    print(f"\n >>> [✓ Antrean Diproses] Parameter antrean berhasil dijadwalkan: TDS={val_tds:.0f} PPM, Turb={val_turb:.0f} NTU.")
+                    print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
                 except ValueError:
                     print(" [!] Input angka tidak valid.")
 
-            elif pilihan == "r":
-                send_command("RESET_SENSOR")
-                print("\n >>> [✓ TERKIRIM] Beralih ke sensor fisik analog PCB.")
-
             elif pilihan == "s":
+                # Tombol pintas opsional untuk memulai pengujian nirkabel
                 send_command("START_TEST")
-                print("\n >>> [✓ TERKIRIM] Memulai pengujian via Cloud...")
+                print("\n >>> [✓ Antrean Dijalankan] Memulai siklus pengujian...")
                 time.sleep(0.5)
                 monitor_testing_session()
 
             elif pilihan == "c":
                 send_command("CANCEL_TEST")
-                print("\n >>> [✓ TERKIRIM] Perintah pembatalan dikirim.")
-
-            elif pilihan == "w":
-                send_command("OPEN_PORTAL")
-                print("\n >>> [✓ TERKIRIM] Membuka Captive Portal Wi-Fi ESP32.")
+                print("\n >>> [✓] Pengujian dibatalkan.")
 
             elif pilihan == "q":
-                print("\n[✓] Keluar dari Menu Lihat Data.")
+                print("\n[✓] Keluar dari Menu.")
                 break
 
             else:
-                print(" [!] Pilihan tidak dikenali.")
+                print(" [!] Pilihan tidak dikenali. Silakan pilih 1, 2, 3, 4, atau Q.")
 
             time.sleep(0.5)
 
