@@ -287,12 +287,19 @@ def main():
     mqtt_client.on_message = on_message
 
     print("[+] Menghubungkan ke sistem...")
-    try:
-        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        mqtt_client.loop_start()
-    except Exception as e:
-        print(f"[!] Gagal terhubung: {e}")
-        return
+    for attempt in range(1, 6):
+        try:
+            mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            mqtt_client.loop_start()
+            break
+        except Exception as e:
+            if attempt < 5:
+                print(f" [.] Menunggu koneksi internet/DNS (percobaan {attempt}/5)...")
+                time.sleep(2)
+            else:
+                print(f"\n[!] Gagal terhubung: {e}")
+                print(" [!] Pastikan laptop terhubung ke Wi-Fi dengan koneksi internet aktif.")
+                return
 
     # Tunggu koneksi broker awal
     for _ in range(30):
@@ -301,7 +308,7 @@ def main():
         time.sleep(0.1)
 
     if not state["connected_to_broker"]:
-        print("[!] Gagal tersambung. Periksa koneksi internet.")
+        print("[!] Gagal tersambung ke broker. Periksa koneksi internet.")
         return
 
     # Cek sinyal ESP32
