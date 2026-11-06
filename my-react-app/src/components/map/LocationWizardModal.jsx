@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatTimeWithSeconds, formatEspTimestampDisplay } from '../../utils/timeFormat';
 import L from 'leaflet';
 
 export default function LocationWizardModal({
@@ -261,7 +262,7 @@ export default function LocationWizardModal({
                                          queuedTestItem.final_verdict === 'Medium' ? '🟡 Sedang (Waspada)' : '🟢 Rendah (Aman)'}
                                     </span>
                                     <span className="text-[11px] text-gray-500 font-medium">
-                                        {queuedTestItem.timestamp_esp || 'Pengujian Selesai'}
+                                        {formatEspTimestampDisplay(queuedTestItem.timestamp_esp) || 'Pengujian Selesai'}
                                     </span>
                                 </div>
 
@@ -341,7 +342,7 @@ export default function LocationWizardModal({
                                             </option>
                                             {history.length > 0 && (
                                                 history.slice().reverse().map((item, idx) => {
-                                                    const timeStr = new Date(item.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                                    const timeStr = formatTimeWithSeconds(item.timestamp);
                                                     return (
                                                         <option key={idx} value={history.length - 1 - idx}>
                                                             [History {timeStr}] TDS: {item.tds} mg/L, Turbiditas: {item.turbidity} NTU ({item.risk?.label})

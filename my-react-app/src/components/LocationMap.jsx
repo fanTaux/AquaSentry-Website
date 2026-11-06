@@ -1,3 +1,4 @@
+import { formatEspTimestampDisplay, extractBriefTime } from '../utils/timeFormat';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { fetchLocations, saveLocation, updateLocation, deleteLocation, fetchPendingQueue, dismissQueueItem, clearAllQueue } from '../services/api';
@@ -243,7 +244,7 @@ export default function LocationMap() {
         setNewSiteTds(testItem.avg_tds);
         setNewSiteTurb(testItem.avg_turbidity);
 
-        const timeBrief = testItem.timestamp_esp ? testItem.timestamp_esp.split(',')[1]?.trim() : '';
+        const timeBrief = extractBriefTime(testItem.timestamp_esp);
         setNewSiteName(`Sampel Air (${timeBrief || testItem.test_id})`);
         setNewSiteKeterangan(`Hasil Uji ESP32: ${testItem.final_verdict} Risk (TDS ${testItem.avg_tds} ppm, Turb ${testItem.avg_turbidity} NTU)`);
         setModalStep(1);
@@ -298,7 +299,7 @@ export default function LocationMap() {
         }
 
         const newId = `site-${Date.now()}`;
-        const savedTime = selectedEspTimestamp || 'Baru saja (Ditandai)';
+        const savedTime = formatEspTimestampDisplay(selectedEspTimestamp) || 'Baru saja (Ditandai)';
 
         const newSite = {
             id: newId,

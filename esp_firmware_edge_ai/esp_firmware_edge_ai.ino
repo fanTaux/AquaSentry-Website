@@ -894,7 +894,7 @@ void setup() {
       #if defined(ESP32)
         WiFi.setSleep(false); // Pastikan Wi-Fi selalu bangun dan tidak terlambat menerima MQTT
       #endif
-      configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+      configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
       Serial.println("[NTP] Menyelaraskan waktu RTC untuk enkripsi TLS HiveMQ Cloud...");
     } else {
       Serial.println("\n[!] Gagal terhubung ke Wi-Fi tersimpan. Meluncurkan Hotspot Setup...");

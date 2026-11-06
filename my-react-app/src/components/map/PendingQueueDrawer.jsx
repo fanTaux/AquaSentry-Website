@@ -1,3 +1,4 @@
+import { formatEspTimestampDisplay } from '../../utils/timeFormat';
 import React, { useState, useEffect } from 'react';
 
 export default function PendingQueueDrawer({
@@ -140,7 +141,7 @@ export default function PendingQueueDrawer({
                                             {/* Jam Lapangan (RTC ESP32) */}
                                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-100">
                                                 <span className="material-symbols-outlined text-sm text-aqua-primary">schedule</span>
-                                                <span>{item.timestamp_esp || 'Baru saja'}</span>
+                                                <span>{formatEspTimestampDisplay(item.timestamp_esp)}</span>
                                             </div>
 
                                             {/* Parameter 30 Detik (TDS & Kekeruhan) */}

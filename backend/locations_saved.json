@@ -242,5 +242,53 @@
     "assScore": 27.46,
     "category": "Sangat Rendah (Aman)",
     "riskLevel": "low"
+  },
+  {
+    "id": "site-1793976812795",
+    "name": "Grand_zuri_hotel",
+    "keterangan": "Hasil Uji ESP32: Low Risk (TDS 85 ppm, Turb 12.5 NTU)",
+    "lat": -8.7023,
+    "lng": 115.1738,
+    "timestamp": "06 Nov 2026, 21:50:22 WIB",
+    "timestamp_esp": "06 Nov 2026, 21:50:22 WIB",
+    "test_id": "TEST-20261106-145022",
+    "tds": 85.0,
+    "turbidity": 12.5,
+    "ari": 2.225,
+    "assScore": 31.01,
+    "category": "Sangat Rendah (Aman)",
+    "riskLevel": "low"
+  },
+  {
+    "id": "site-1793977313822",
+    "name": "sampel air _ udayana",
+    "keterangan": "Hasil Uji ESP32: Medium Risk (TDS 245.1 ppm, Turb 215.1 NTU)",
+    "lat": -8.7954,
+    "lng": 115.1716,
+    "timestamp": "06 Nov 2026, 22:00:59 WIB",
+    "timestamp_esp": "06 Nov 2026, 22:00:59 WIB",
+    "test_id": "TEST-20261106-150059",
+    "tds": 245.1,
+    "turbidity": 215.1,
+    "ari": 36.2585,
+    "assScore": 2.68,
+    "category": "Sedang",
+    "riskLevel": "moderate"
+  },
+  {
+    "id": "site-1793977612233",
+    "name": "Sampel_udayana_hijau( air kran )",
+    "keterangan": "Hasil Uji ESP32: Low Risk (TDS 85.1 ppm, Turb 12.5 NTU)",
+    "lat": -8.7947,
+    "lng": 115.1723,
+    "timestamp": "06 Nov 2026, 22:03:43 WIB",
+    "timestamp_esp": "06 Nov 2026, 22:03:43 WIB",
+    "test_id": "TEST-20261106-150343",
+    "tds": 85.1,
+    "turbidity": 12.5,
+    "ari": 2.2252,
+    "assScore": 31.01,
+    "category": "Sangat Rendah (Aman)",
+    "riskLevel": "low"
   }
 ]

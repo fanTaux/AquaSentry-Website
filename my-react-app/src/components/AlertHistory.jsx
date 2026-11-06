@@ -1,4 +1,5 @@
 import { useAppContext } from '../context/AppContext';
+import { formatTime, formatDateShort } from '../utils/timeFormat';
 
 export default function AlertHistory({ isDropdown = false }) {
     const { history } = useAppContext();
@@ -30,8 +31,8 @@ export default function AlertHistory({ isDropdown = false }) {
                     </div>
                 ) : alerts.map((alert) => {
                     const style = getStyle(alert.risk.level);
-                    const time = new Date(alert.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                    const date = new Date(alert.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    const time = formatTime(alert.timestamp);
+                    const date = formatDateShort(alert.timestamp);
 
                     return (
                         <div key={alert.timestamp} className="py-4 flex items-start gap-4 group transition-all">

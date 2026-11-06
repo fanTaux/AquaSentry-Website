@@ -1,3 +1,4 @@
+import { formatEspTimestampDisplay } from '../../utils/timeFormat';
 import { useState } from 'react';
 import { getBadgeStyle } from './MapCanvas';
 
@@ -156,7 +157,7 @@ export default function LocationCardGrid({ sites, filteredSites, selectedSite, o
                                             {/* Method & Timestamp */}
                                             <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium pt-0.5">
                                                 <span className="truncate max-w-[140px]">{s.method}</span>
-                                                <span className="shrink-0">{s.timestamp}</span>
+                                                <span className="shrink-0">{formatEspTimestampDisplay(s.timestamp)}</span>
                                             </div>
                                         </div>
                                     );

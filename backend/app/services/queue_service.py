@@ -50,10 +50,11 @@ def add_test_result(
     if not test_id:
         test_id = f"TEST-{now_epoch}"
 
-    if not timestamp_esp:
-        # Format WIB (UTC+7)
-        local_time = time.localtime(now_epoch)
-        timestamp_esp = time.strftime("%d %b %Y, %H:%M:%S WIB", local_time)
+    # Pastikan timestamp selalu mengikuti jam lokal WIB server/laptop (UTC+7)
+    local_time = time.localtime(now_epoch)
+    server_wib_str = time.strftime("%d %b %Y, %H:%M:%S WIB", local_time)
+    if not timestamp_esp or ("WIB" in str(timestamp_esp) and any(f",{h:02d}:" in str(timestamp_esp) for h in range(17))):
+        timestamp_esp = server_wib_str
 
     # Hindari duplikasi jika test_id yang sama sudah ada
     for item in pending_queue:

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { formatTime, formatTimeWithSeconds, formatDateTimeFull } from '../utils/timeFormat';
 
 const riskCopy = {
     low: {
@@ -53,9 +54,7 @@ export default function DashboardMetrics() {
         }
     };
 
-    const lastUpdateLabel = lastUpdate
-        ? new Date(lastUpdate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        : '-';
+    const lastUpdateLabel = lastUpdate ? formatTimeWithSeconds(lastUpdate) : '-';
 
     const elapsed = Math.min(Math.max(testElapsedSec || 0, 0), 30);
     const progressPercent = Math.round((elapsed / 30) * 100);
@@ -307,7 +306,7 @@ export default function DashboardMetrics() {
                                                 </div>
                                                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                                                     <span className="text-[10px] sm:text-[11px] font-bold text-aqua-text-muted whitespace-nowrap">
-                                                        {new Date(r.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                        {formatTime(r.timestamp || Date.now())}
                                                     </span>
                                                     <span className="material-symbols-outlined text-gray-300 group-hover:text-aqua-primary transition-colors text-base">chevron_right</span>
                                                 </div>
@@ -366,9 +365,7 @@ export default function DashboardMetrics() {
                             <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">Detail Pengukuran</span>
                             <h2 className="text-xl sm:text-2xl font-black mt-1 pr-8 leading-tight">{selectedReading.risk?.label || 'Pengukuran Kualitas Air'}</h2>
                             <p className="text-[11px] text-white/70 mt-1">
-                                {new Date(selectedReading.timestamp || Date.now()).toLocaleDateString('id-ID', {
-                                    weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-                                })}
+                                {formatDateTimeFull(selectedReading.timestamp || Date.now())}
                             </p>
                         </div>
                         <div className="p-4 sm:p-6 overflow-y-auto space-y-4">

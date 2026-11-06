@@ -1,3 +1,4 @@
+import { formatEspTimestampDisplay } from '../../utils/timeFormat';
 import { getBadgeStyle } from './MapCanvas';
 
 export default function LocationDetailSidebar({ selectedSite, onEditSite, onDeleteSite }) {
@@ -90,7 +91,7 @@ export default function LocationDetailSidebar({ selectedSite, onEditSite, onDele
             {/* Waktu Pengujian Asli dari ESP32 */}
             <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-2 border-t border-gray-100">
                 <span className="material-symbols-outlined text-sm text-aqua-primary">schedule</span>
-                <span>Waktu Pengujian: <strong className="text-gray-700">{selectedSite.timestamp || 'Baru saja'}</strong></span>
+                <span>Waktu Pengujian: <strong className="text-gray-700">{formatEspTimestampDisplay(selectedSite.timestamp)}</strong></span>
             </div>
         </div>
     );
