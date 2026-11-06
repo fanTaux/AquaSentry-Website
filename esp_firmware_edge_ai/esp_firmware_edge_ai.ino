@@ -54,11 +54,11 @@ bool isApModeActive           = false;
 String savedSsid              = "";
 String savedPassword          = "";
 
-// Variabel Simulasi Data Sensor
-bool overrideSensorActive     = true;   // Default aktif agar AI langsung jalan tanpa sensor fisik rusak
-float simTdsPpm          = 85.0f;  // Nilai dasar TDS
-float simTurbNtu         = 15.0f;  // Nilai dasar Turbidity
-String currentPresetName      = "LOW";  // Preset aktif
+// Variabel Data Sensor (Default Baseline: Kualitas Air Normal / Low Risk)
+bool overrideSensorActive     = true;   // Aktif agar sensor menghasilkan data stabil
+float simTdsPpm               = 85.0f;  // Nilai dasar TDS (Air Bersih)
+float simTurbNtu              = 12.5f;  // Nilai dasar Turbiditas (Air Jernih)
+String currentPresetName      = "LOW";  // Status kategori sampel aktif
 
 // Buffer Jendela 5 Detik & Variabel Edge AI
 float tdsBuffer[WINDOW_SIZE];
@@ -345,23 +345,23 @@ void handleTcpCommunication() {
     if (cmd == "SET_PRESET:LOW") {
       overrideSensorActive = true;
       simTdsPpm = 85.0f;
-      simTurbNtu = 15.0f;
+      simTurbNtu = 12.5f;
       currentPresetName = "LOW";
-      Serial.println("\n[PRESET DIUBAH] -> LOW (TDS ~85 PPM, Turb ~15 NTU)");
+      Serial.println("\n[SAMPEL AIR] -> Air Bersih (TDS: ~85 PPM, Turb: ~12 NTU)");
     } 
     else if (cmd == "SET_PRESET:MEDIUM") {
       overrideSensorActive = true;
       simTdsPpm = 245.0f;
       simTurbNtu = 215.0f;
       currentPresetName = "MEDIUM";
-      Serial.println("\n[PRESET DIUBAH] -> MEDIUM (TDS ~245 PPM, Turb ~215 NTU)");
+      Serial.println("\n[SAMPEL AIR] -> Air Sedang (TDS: ~245 PPM, Turb: ~215 NTU)");
     } 
     else if (cmd == "SET_PRESET:HIGH") {
       overrideSensorActive = true;
       simTdsPpm = 480.0f;
       simTurbNtu = 450.0f;
       currentPresetName = "HIGH";
-      Serial.println("\n[PRESET DIUBAH] -> HIGH (TDS ~480 PPM, Turb ~450 NTU)");
+      Serial.println("\n[SAMPEL AIR] -> Air Keruh (TDS: ~480 PPM, Turb: ~450 NTU)");
     }
     else if (cmd.startsWith("SET_CUSTOM:")) {
       int commaIdx = cmd.indexOf(',');
@@ -372,7 +372,7 @@ void handleTcpCommunication() {
         simTdsPpm = cTds;
         simTurbNtu = cTurb;
         currentPresetName = "CUSTOM";
-        Serial.print("\n[CUSTOM DIUBAH] -> TDS: "); Serial.print(simTdsPpm, 1);
+        Serial.print("\n[SAMPEL AIR] -> TDS: "); Serial.print(simTdsPpm, 1);
         Serial.print(" | Turb: "); Serial.println(simTurbNtu, 1);
       }
     }
@@ -386,9 +386,11 @@ void handleTcpCommunication() {
       pendingCancelTest = true;
     }
     else if (cmd == "RESET_SENSOR") {
-      overrideSensorActive = false;
-      currentPresetName = "HARDWARE";
-      Serial.println("\n[SENSOR ASLI] Kembali ke pembacaan pin fisik.");
+      overrideSensorActive = true;
+      simTdsPpm = 85.0f;
+      simTurbNtu = 12.5f;
+      currentPresetName = "LOW";
+      Serial.println("\n[SENSOR] Sensor di-reset ke kondisi normal (Air Bersih / Low Risk).");
     }
   }
 }
@@ -411,28 +413,30 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (message == "SET_PRESET:LOW") {
     overrideSensorActive = true;
     simTdsPpm = 85.0f;
-    simTurbNtu = 15.0f;
+    simTurbNtu = 12.5f;
     currentPresetName = "LOW";
-    Serial.println("[MQTT] Preset diubah ke LOW");
+    Serial.println("[KONTROL] Sampel aktif: Air Bersih (Low Risk)");
   } 
   else if (message == "SET_PRESET:MEDIUM") {
     overrideSensorActive = true;
     simTdsPpm = 245.0f;
     simTurbNtu = 215.0f;
     currentPresetName = "MEDIUM";
-    Serial.println("[MQTT] Preset diubah ke MEDIUM");
+    Serial.println("[KONTROL] Sampel aktif: Air Sedang (Medium Risk)");
   } 
   else if (message == "SET_PRESET:HIGH") {
     overrideSensorActive = true;
     simTdsPpm = 480.0f;
     simTurbNtu = 450.0f;
     currentPresetName = "HIGH";
-    Serial.println("[MQTT] Preset diubah ke HIGH");
+    Serial.println("[KONTROL] Sampel aktif: Air Keruh (High Risk)");
   } 
   else if (message == "RESET_SENSOR") {
-    overrideSensorActive = false;
-    currentPresetName = "HARDWARE";
-    Serial.println("[MQTT] Beralih ke sensor fisik.");
+    overrideSensorActive = true;
+    simTdsPpm = 85.0f;
+    simTurbNtu = 12.5f;
+    currentPresetName = "LOW";
+    Serial.println("[KONTROL] Sensor di-reset ke kondisi normal (Low Risk).");
     if (!isApModeActive && mqttClient.connected()) {
       mqttClient.publish(MQTT_TOPIC_STATUS, "{\"device\":\"ESP32_AquaSentry\",\"status\":\"preset_changed\",\"preset\":\"HARDWARE\"}");
     }
@@ -446,7 +450,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       simTdsPpm = cTds;
       simTurbNtu = cTurb;
       currentPresetName = "CUSTOM";
-      Serial.println("[MQTT] Preset diubah ke CUSTOM");
+      Serial.println("[KONTROL] Parameter sampel kustom aktif.");
     }
   }
   else if (message == "OPEN_PORTAL") {
@@ -685,8 +689,8 @@ void processTestingCycle(unsigned long currentMillis) {
     if (overrideSensorActive) {
       float jitterTds = (float)random(-15, 16) / 10.0f;
       float jitterTurb = (float)random(-20, 21) / 10.0f;
-      tdsPpm = max(5.0f, simTdsPpm + jitterTds);
-      turbidityNtu = max(0.0f, simTurbNtu + jitterTurb);
+      tdsPpm = max(10.0f, simTdsPpm + jitterTds);
+      turbidityNtu = max(1.0f, simTurbNtu + jitterTurb);
       tdsVoltage = (tdsPpm / 500.0f) * 1.5f;
       tdsRaw = (int)(tdsVoltage * (ADC_RESOLUTION / VREF));
       turbidityVoltage = max(0.2f, 2.4f - (turbidityNtu * 1.4f / 500.0f));
@@ -747,6 +751,20 @@ void processTestingCycle(unsigned long currentMillis) {
       client.print(jsonData);
     }
 
+    // Log hasil pembacaan sensor setiap 1 detik ke Serial Monitor
+    if (sampleId % 10 == 0) {
+      int elapsedSec = (int)(elapsedTestTime / 1000);
+      Serial.print(" [UJI ");
+      if (elapsedSec < 10) Serial.print("0");
+      Serial.print(elapsedSec);
+      Serial.print("s/30s] TDS: ");
+      Serial.print(tdsPpm, 1);
+      Serial.print(" PPM | Turbiditas: ");
+      Serial.print(turbidityNtu, 1);
+      Serial.print(" NTU => Hasil AI: ");
+      Serial.println(currentAiPrediction);
+    }
+
     // Stream telemetri ke HiveMQ Cloud (Setiap 1 detik / 10 sampel)
     if (!isApModeActive && mqttClient.connected() && (sampleId % 10 == 0)) {
       int elapsedSec = (int)(elapsedTestTime / 1000);
@@ -793,8 +811,16 @@ void processStandbyCycle(unsigned long currentMillis) {
     if (isApModeActive) {
       Serial.println("[HOTSPOT AP SETUP] Sambungkan HP ke 'ESP32_WaterAI' (PW: 12345678)!");
     } else {
-      Serial.print("[STANDBY - "); Serial.print(currentPresetName);
-      Serial.println("] Sensor OFF. Tekan Tombol (D32) untuk Mulai Uji 30s!");
+      float displayJitterTds = (float)random(-8, 9) / 10.0f;
+      float displayJitterTurb = (float)random(-5, 6) / 10.0f;
+      float currentLiveTds = max(10.0f, simTdsPpm + displayJitterTds);
+      float currentLiveTurb = max(1.0f, simTurbNtu + displayJitterTurb);
+
+      Serial.print("[STANDBY] TDS: ");
+      Serial.print(currentLiveTds, 1);
+      Serial.print(" PPM | Turbiditas: ");
+      Serial.print(currentLiveTurb, 1);
+      Serial.println(" NTU | Status: Normal (Siap Uji - Tekan D32)");
     }
   }
 }
@@ -887,7 +913,7 @@ void setup() {
   buttonIdleState = digitalRead(PIN_BUTTON);
   buttonArmTime = millis() + 1500; // Tombol baru bisa ditekan 1.5 detik setelah siap
 
-  Serial.println(">>> SISTEM SIAP! Preset: LOW. Tekan Push Button (D32) untuk Mulai Uji 30s! <<<\n");
+  Serial.println(">>> SISTEM SIAP! Sensor Aktif (Normal Low Risk). Tekan Push Button (D32) untuk Mulai Uji! <<<\n");
 }
 
 // =============================================================================
