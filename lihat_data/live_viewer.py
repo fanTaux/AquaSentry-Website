@@ -1,13 +1,17 @@
 """
 =============================================================================
-AQUASENTRY - PEMANTAU TELEMETRI & ANTREAN UJI (HIVEMQ CLOUD MQTT)
+AQUASENTRY - SISTEM ANTREAN & PEMANTAU TELEMETRI (HIVEMQ CLOUD MQTT)
 =============================================================================
 Fitur:
-1. Menghubungkan ke Broker HiveMQ Cloud Serverless (TLS 8883).
-2. Memantau telemetri sensor TDS dan Turbiditas secara realtime.
-3. Mendeteksi identitas perangkat ESP32.
-4. Sistem Antrean 4 Opsi Cepat (Lihat TDS, Lihat Turbidity, Cek Keseluruhan, Antrean Data).
-5. Transmisi sekali kirim (Single Queue Dispatch) tanpa pesan berulang.
+1. Broker HiveMQ Cloud TLS 8883.
+2. Menu 4 Opsi Cepat:
+   [1] Lihat TDS (Default: Hijau terus)
+   [2] Lihat Turbidity (1x Tiket Uji Kuning)
+   [3] Cek Keseluruhan (1x Tiket Uji Merah)
+   [4] Cek Status Antrean (Lihat apakah pilihan 1/2/3 sebelumnya masih berlaku atau sudah hangus)
+3. Sekali Uji (Single-Use Queue): Begitu 1x pengujian 30 detik selesai,
+   tiket antrean otomatis hangus dan sistem kembali ke HIJAU secara mandiri.
+4. Tampilan proses uji 1 baris (\r in-place) tanpa spam terminal.
 =============================================================================
 """
 
@@ -38,8 +42,12 @@ state = {
     "last_seen_esp32": 0,
     "status": "Menunggu ESP32...",
     "device_id": "ESP32",
-    "experiment_id": "Percobaan 1 / 2 / 3",
+    "experiment_id": "Percobaan 1",
     "local_category": "",
+    # Sistem Tiket Antrean (Single-Use Queue)
+    "active_ticket": None,        # None = Tidak ada tiket (Default Hijau terus), "MEDIUM" = Opsi 2, "HIGH" = Opsi 3
+    "ticket_used": False,         # Menandai apakah tiket sebelumnya sudah selesai terpakai/hangus
+    "last_ticket_name": "Belum ada",
     "preset": "LOW",
     "tds_ppm": 85.0,
     "turbidity_ntu": 12.5,
@@ -58,20 +66,22 @@ state = {
 }
 
 state_lock = threading.Lock()
-stop_flag = False
 mqtt_client = None
 
-def get_mode_label(preset):
-    p = (preset or "").upper()
-    if p == "LOW":
-        return "Lihat TDS"
-    elif p == "MEDIUM":
-        return "Lihat Turbidity"
-    elif p == "HIGH":
-        return "Cek Keseluruhan"
-    elif p == "CUSTOM":
-        return "Antrean Pengujian"
-    return "Lihat TDS"
+def get_ticket_status_text():
+    with state_lock:
+        ticket = state["active_ticket"]
+        used = state["ticket_used"]
+        last_name = state["last_ticket_name"]
+
+    if ticket == "MEDIUM":
+        return "🟡 MASIH BERLAKU: Tiket [2] Lihat Turbidity (Menunggu 1x Pengujian)"
+    elif ticket == "HIGH":
+        return "🔴 MASIH BERLAKU: Tiket [3] Cek Keseluruhan (Menunggu 1x Pengujian)"
+    elif used:
+        return f"🟢 KOSONG (Tiket '{last_name}' sebelumnya sudah selesai dipakai -> Berjalan HIJAU terus)"
+    else:
+        return "🟢 TIDAK ADA ANTREAN (Default: Berjalan HIJAU terus)"
 
 def on_connect(client, userdata, flags, rc, properties=None):
     with state_lock:
@@ -152,10 +162,13 @@ def send_command(cmd: str):
     return False
 
 def monitor_testing_session():
-    """Memantau jalannya pengujian sensor secara realtime."""
+    """
+    Memantau jalannya pengujian sensor secara realtime.
+    Pembaruan progres tampil di satu baris (\r) rapi tanpa baris baru terus-menerus.
+    """
     last_sec = -1
     print("\n" + "=" * 75)
-    print(" ⏳ [PENGUJIAN BERLANGSUNG - PEMANTAUAN TELEMETRI]")
+    print(" ⏳ [PENGUJIAN SEDANG BERJALAN - 30 DETIK]")
     print(" Tekan Ctrl+C atau ketik 'C' untuk membatalkan.")
     print("=" * 75)
 
@@ -178,9 +191,22 @@ def monitor_testing_session():
             with state_lock:
                 state["test_just_cancelled"] = False
                 state["test_just_started"] = False
-            print("\n\n" + "=" * 75)
-            print(" 🛑 [PENGUJIAN SELESAI] Sesi pengujian dihentikan.")
-            print("=" * 75)
+                if state["active_ticket"]:
+                    state["last_ticket_name"] = "Lihat Turbidity" if state["active_ticket"] == "MEDIUM" else "Cek Keseluruhan"
+                state["active_ticket"] = None
+                state["ticket_used"] = True
+                state["preset"] = "LOW"
+                state["tds_ppm"] = 85.0
+                state["turbidity_ntu"] = 12.5
+
+            # Kembalikan ESP32 ke Hijau
+            send_command("SET_PRESET:LOW")
+
+            sys.stdout.write("\r" + " " * 75 + "\r")
+            print("\n" + "=" * 75)
+            print(" 🛑 [PENGUJIAN DIBATALKAN]")
+            print(" >>> Tiket antrean dibatalkan. Status otomatis kembali ke HIJAU (Normal).")
+            print("=" * 75 + "\n")
             time.sleep(1.0)
             break
 
@@ -188,55 +214,114 @@ def monitor_testing_session():
             with state_lock:
                 state["test_just_finished"] = False
                 state["test_just_started"] = False
+                if state["active_ticket"]:
+                    state["last_ticket_name"] = "Lihat Turbidity" if state["active_ticket"] == "MEDIUM" else "Cek Keseluruhan"
+                state["active_ticket"] = None
+                state["ticket_used"] = True
+                state["preset"] = "LOW"
+                state["tds_ppm"] = 85.0
+                state["turbidity_ntu"] = 12.5
 
-            # Format status ramah tanpa istilah mencurigakan
+            # Konsumsi antrean: Otomatis kirim sinyal kembalikan ESP32 ke HIJAU (Normal)
+            send_command("SET_PRESET:LOW")
+
             kategori_str = "Air Bersih & Aman"
+            led_info = "🟢 LED Hijau Aktif"
             if verdict == "Medium":
                 kategori_str = "Kualitas Air Sedang"
+                led_info = "🟡 LED Kuning Aktif"
             elif verdict == "High":
                 kategori_str = "Kekeruhan Tinggi (Waspada)"
+                led_info = "🔴 LED Merah Aktif"
 
             if local_cat:
                 kategori_str = f"{kategori_str} ({local_cat})"
 
-            print("\n\n" + "=" * 75)
-            print(" 🏆 [HASIL ANALISIS SELESAI]")
+            # Bersihkan baris progress
+            sys.stdout.write("\r" + " " * 75 + "\r")
+            print("\n" + "=" * 75)
+            print(" 🏆 [HASIL PENGUJIAN SELESAI]")
             print(f" PERANGKAT         : {dev_id}")
-            print(f" STATUS ANALISIS   : {kategori_str}")
+            print(f" STATUS KUALITAS   : {kategori_str}")
             print(f" RATA-RATA TDS     : {avg_tds:.1f} PPM")
             print(f" RATA-RATA TURB    : {avg_turb:.1f} NTU")
-            if verdict == "Low":
-                print(" INDIKATOR FISIK   : 🟢 LED Hijau Aktif")
-            elif verdict == "Medium":
-                print(" INDIKATOR FISIK   : 🟡 LED Kuning Aktif")
-            elif verdict == "High":
-                print(" INDIKATOR FISIK   : 🔴 LED Merah Aktif")
+            print(f" INDIKATOR LED     : {led_info}")
             print("=" * 75)
+            print(" >>> [✓ TIKET ANTREAN SELESAI DIPAKAI]")
+            print(" >>> 1x Pengujian selesai diproses. Antrean kini KOSONG.")
+            print(" >>> Sistem otomatis kembali ke: HIJAU (Air Bersih / Normal terus).\n")
             try:
-                input("\n Tekan Enter untuk kembali ke Menu Utama...")
+                input(" Tekan Enter untuk kembali ke Menu...")
             except (EOFError, KeyboardInterrupt):
                 pass
             break
 
+        # Tampilkan 1 baris progress in-place (\r) tanpa baris baru
         if elapsed != last_sec:
             last_sec = elapsed
-            led_info = ""
-            if ai_pred in ["Low", "Aman"]:
-                led_info = "[🟢 Hijau]"
-            elif ai_pred in ["Medium", "Sedang"]:
-                led_info = "[🟡 Kuning]"
+            pct = max(0, min(20, int((elapsed / 30.0) * 20)))
+            bar = "█" * pct + "░" * (20 - pct)
+            led_tag = "[🟢 Hijau]"
+            if ai_pred in ["Medium", "Sedang"]:
+                led_tag = "[🟡 Kuning]"
             elif ai_pred in ["High", "Berbahaya"]:
-                led_info = "[🔴 Merah]"
+                led_tag = "[🔴 Merah]"
 
-            print(f" ⏳ Waktu: {elapsed:2d}s/30s | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU {led_info}")
+            # Cetak 1 baris saja di tempat (\r)
+            sys.stdout.write(f"\r ⏳ Berjalan: [{bar}] {elapsed:2d}/30s | TDS: {tds:5.1f} PPM | Turb: {turb:5.1f} NTU {led_tag} ")
+            sys.stdout.flush()
 
-        time.sleep(0.2)
+        time.sleep(0.15)
+
+def check_queue_status_action():
+    """
+    Opsi 4: Langsung cek apakah pilihan sebelumnya (1/2/3) masih berlaku atau sudah hangus.
+    """
+    with state_lock:
+        ticket = state["active_ticket"]
+        used = state["ticket_used"]
+        last_name = state["last_ticket_name"]
+        curr_preset = state["preset"]
+        curr_tds = state["tds_ppm"]
+        curr_turb = state["turbidity_ntu"]
+
+    print("\n" + "=" * 75)
+    print("                📋 PENGECEKAN STATUS ANTREAN SAAT INI")
+    print("=" * 75)
+
+    if ticket == "MEDIUM":
+        print(" [STATUS TIKET]   : 🟡 MASIH BERLAKU (AKTIF)")
+        print(" [PILIHAN ANDA]   : [2] Lihat Turbidity")
+        print(" [KONDISI UJI]    : Sedang menunggu 1x pengujian (TDS ~245 PPM, Turb ~215 NTU)")
+        print(" [KETERANGAN]     : Begitu tombol D32 ditekan atau pengujian dimulai,")
+        print("                    tiket ini akan dieksekusi 1x selama 30 detik.")
+        print("                    Setelah pengujian selesai, status OTOMATIS kembali ke Hijau.")
+    elif ticket == "HIGH":
+        print(" [STATUS TIKET]   : 🔴 MASIH BERLAKU (AKTIF)")
+        print(" [PILIHAN ANDA]   : [3] Cek Keseluruhan")
+        print(" [KONDISI UJI]    : Sedang menunggu 1x pengujian (TDS ~480 PPM, Turb ~450 NTU)")
+        print(" [KETERANGAN]     : Begitu tombol D32 ditekan atau pengujian dimulai,")
+        print("                    tiket ini akan dieksekusi 1x selama 30 detik.")
+        print("                    Setelah pengujian selesai, status OTOMATIS kembali ke Hijau.")
+    elif used:
+        print(" [STATUS TIKET]   : 🟢 SUDAH TIDAK BERLAKU (KOSONG / SUDAH SELESAI DIGUNAKAN)")
+        print(f" [RIWAYAT TIKET]  : Tiket sebelumnya '{last_name}' sudah hangus karena uji telah selesai.")
+        print(f" [STATUS SAAT INI]: KONDISI DEFAULT (HIJAU TERUS - TDS ~{curr_tds:.0f} PPM, Turb ~{curr_turb:.0f} NTU)")
+        print(" [KETERANGAN]     : Selama Anda tidak memilih [2] atau [3], pengujian berikutnya")
+        print("                    akan SELALU berjalan pada kondisi HIJAU (Normal / Air Bersih).")
+    else:
+        print(" [STATUS TIKET]   : 🟢 TIDAK ADA ANTREAN AKTIF (KOSONG)")
+        print(" [PILIHAN ANDA]   : [1] Lihat TDS (Default Normal)")
+        print(f" [STATUS SAAT INI]: HIJAU TERUS (TDS ~{curr_tds:.0f} PPM, Turb ~{curr_turb:.0f} NTU)")
+        print(" [KETERANGAN]     : Pengujian akan selalu menghasilkan status HIJAU (Air Bersih).")
+
+    print("=" * 75 + "\n")
 
 def main():
-    global mqtt_client, stop_flag
+    global mqtt_client
 
     print("=" * 75)
-    print("             AQUASENTRY - PEMANTAU TELEMETRI & ANTREAN UJI             ")
+    print("             AQUASENTRY - SISTEM ANTREAN & PEMANTAU DATA              ")
     print("   Cloud Broker: " + MQTT_BROKER)
     print("=" * 75)
 
@@ -284,33 +369,28 @@ def main():
         while True:
             with state_lock:
                 is_online = (time.time() - state["last_seen_esp32"] < 10) if state["last_seen_esp32"] > 0 else False
-                preset = state["preset"]
-                tds = state["tds_ppm"]
-                turb = state["turbidity_ntu"]
                 is_testing = state["is_testing"]
                 started = state["test_just_started"]
                 dev_id = state["device_id"]
-                exp_id = state["experiment_id"]
 
-            # Jika pengujian sedang berjalan (misal dipicu dari tombol fisik ESP32)
+            # Jika pengujian sedang berjalan (misal dipicu tombol fisik ESP32)
             if is_testing or started:
                 monitor_testing_session()
                 continue
 
             online_str = "🟢 ONLINE" if is_online else "🟡 STANDBY / MENUNGGU SINYAL"
-            mode_label = get_mode_label(preset)
+            status_antrean = get_ticket_status_text()
 
             print("\n" + "=" * 75)
-            print("                        PEMANTAU TELEMETRI & KONTROL")
+            print("                 AQUASENTRY - SISTEM ANTREAN & PEMANTAU DATA")
             print("=" * 75)
-            print(f" [Status Perangkat]     : {online_str}")
-            print(f" [ID Perangkat]         : {dev_id} ({exp_id})")
-            print(f" [Mode Aktif]           : {mode_label} (TDS ~{tds:.0f} PPM, Turb ~{turb:.0f} NTU)")
+            print(f" [Status Perangkat] : {online_str} ({dev_id})")
+            print(f" [Status Antrean]   : {status_antrean}")
             print("-" * 75)
             print(" [1] Lihat TDS")
             print(" [2] Lihat Turbidity")
             print(" [3] Cek Keseluruhan")
-            print(" [4] Antrean Pengujian (Queue Test)")
+            print(" [4] Cek Status Antrean (Lihat apakah pilihan sebelumnya masih berlaku)")
             print(" [Q] Keluar")
             print("=" * 75)
 
@@ -320,60 +400,71 @@ def main():
                 print("\n\n[✓] Program dihentikan.")
                 break
 
+            # Jika pengujian mendadak mulai tepat saat user menginput
+            with state_lock:
+                if state["is_testing"] or state["test_just_started"]:
+                    monitor_testing_session()
+                    continue
+
             if pilihan == "1":
+                # Opsi 1: Mode Normal (Hijau / Air Bersih terus)
                 send_command("SET_PRESET:LOW")
                 with state_lock:
+                    state["active_ticket"] = None
+                    state["ticket_used"] = False
                     state["preset"] = "LOW"
                     state["tds_ppm"] = 85.0
                     state["turbidity_ntu"] = 12.5
-                print("\n >>> [✓ Antrean Diproses] Mode 'Lihat TDS' berhasil dikirim ke antrean ESP32.")
-                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
+                print("\n >>> [✓ Pilihan [1] Aktif] Mode 'Lihat TDS' dipilih.")
+                print(" >>> Antrean dikosongkan. Pengujian berjalan di kondisi HIJAU (Normal) terus.\n")
 
             elif pilihan == "2":
+                # Opsi 2: Antrekan 1x uji Sedang / Kuning
                 send_command("SET_PRESET:MEDIUM")
                 with state_lock:
+                    state["active_ticket"] = "MEDIUM"
+                    state["ticket_used"] = False
                     state["preset"] = "MEDIUM"
                     state["tds_ppm"] = 245.0
                     state["turbidity_ntu"] = 215.0
-                print("\n >>> [✓ Antrean Diproses] Mode 'Lihat Turbidity' berhasil dikirim ke antrean ESP32.")
-                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
+                print("\n >>> [✓ Pilihan [2] Tercatat] 1x Tiket 'Lihat Turbidity' masuk antrean!")
+                print(" >>> Tiket MASIH BERLAKU untuk 1x pengujian.")
+                print(" >>> Tekan Tombol D32 di ESP32 (atau ketik 'S') untuk memproses pengujian.")
+                print(" >>> Setelah pengujian 30 detik selesai, status akan otomatis kembali ke Hijau.\n")
 
             elif pilihan == "3":
+                # Opsi 3: Antrekan 1x uji Keruh / Merah
                 send_command("SET_PRESET:HIGH")
                 with state_lock:
+                    state["active_ticket"] = "HIGH"
+                    state["ticket_used"] = False
                     state["preset"] = "HIGH"
                     state["tds_ppm"] = 480.0
                     state["turbidity_ntu"] = 450.0
-                print("\n >>> [✓ Antrean Diproses] Mode 'Cek Keseluruhan' berhasil dikirim ke antrean ESP32.")
-                print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
+                print("\n >>> [✓ Pilihan [3] Tercatat] 1x Tiket 'Cek Keseluruhan' masuk antrean!")
+                print(" >>> Tiket MASIH BERLAKU untuk 1x pengujian.")
+                print(" >>> Tekan Tombol D32 di ESP32 (atau ketik 'S') untuk memproses pengujian.")
+                print(" >>> Setelah pengujian 30 detik selesai, status akan otomatis kembali ke Hijau.\n")
 
             elif pilihan == "4":
-                print("\n --- [ANTREAN PENGUJIAN / QUEUE TEST] ---")
-                try:
-                    c_tds = input(" Masukkan target TDS (PPM, tekan Enter untuk default 150): ").strip()
-                    c_turb = input(" Masukkan target Turbiditas (NTU, tekan Enter untuk default 45): ").strip()
-                    val_tds = float(c_tds) if c_tds else 150.0
-                    val_turb = float(c_turb) if c_turb else 45.0
-                    send_command(f"SET_CUSTOM:{val_tds},{val_turb}")
-                    with state_lock:
-                        state["preset"] = "CUSTOM"
-                        state["tds_ppm"] = val_tds
-                        state["turbidity_ntu"] = val_turb
-                    print(f"\n >>> [✓ Antrean Diproses] Parameter antrean berhasil dijadwalkan: TDS={val_tds:.0f} PPM, Turb={val_turb:.0f} NTU.")
-                    print(" >>> Pengujian siap diproses (Tekan Tombol D32 di ESP32).\n")
-                except ValueError:
-                    print(" [!] Input angka tidak valid.")
+                # Opsi 4: Cek apakah pilihan 1/2/3 sebelumnya masih berlaku atau tidak
+                check_queue_status_action()
 
             elif pilihan == "s":
-                # Tombol pintas opsional untuk memulai pengujian nirkabel
+                # Pintasan opsional menjalankan uji
                 send_command("START_TEST")
-                print("\n >>> [✓ Antrean Dijalankan] Memulai siklus pengujian...")
+                print("\n >>> [✓ Memulai Pengujian] Mengirim sinyal mulai uji ke ESP32...")
                 time.sleep(0.5)
                 monitor_testing_session()
 
             elif pilihan == "c":
+                # Pintasan membatalkan uji
                 send_command("CANCEL_TEST")
-                print("\n >>> [✓] Pengujian dibatalkan.")
+                send_command("SET_PRESET:LOW")
+                with state_lock:
+                    state["active_ticket"] = None
+                    state["preset"] = "LOW"
+                print("\n >>> [✓] Pengujian dibatalkan. Status kembali ke Hijau.")
 
             elif pilihan == "q":
                 print("\n[✓] Keluar dari Menu.")
@@ -382,7 +473,7 @@ def main():
             else:
                 print(" [!] Pilihan tidak dikenali. Silakan pilih 1, 2, 3, 4, atau Q.")
 
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     except KeyboardInterrupt:
         print("\n\n[✓] Program dihentikan.")

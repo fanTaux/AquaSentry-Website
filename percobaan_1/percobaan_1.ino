@@ -342,6 +342,11 @@ void handleTcpCommunication() {
     String cmd = client.readStringUntil('\n');
     cmd.trim();
 
+    if (isTesting && (cmd.startsWith("SET_PRESET:") || cmd.startsWith("SET_CUSTOM:"))) {
+      Serial.println("\n[TCP] Sesi pengujian 30s sedang aktif. Pergantian preset diabaikan.");
+      return;
+    }
+
     if (cmd == "SET_PRESET:LOW") {
       overrideSensorActive = true;
       simTdsPpm = 85.0f;
@@ -409,6 +414,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   Serial.print(topic);
   Serial.print(" | Pesan: ");
   Serial.println(message);
+
+  if (isTesting && (message.startsWith("SET_PRESET:") || message.startsWith("SET_CUSTOM:"))) {
+    Serial.println("[MQTT] Sesi pengujian 30s sedang aktif. Pergantian preset diabaikan.");
+    return;
+  }
 
   if (message == "SET_PRESET:LOW") {
     overrideSensorActive = true;
@@ -588,6 +598,12 @@ void cancelTestingSession() {
   if (!isApModeActive && mqttClient.connected()) {
     mqttClient.publish(MQTT_TOPIC_STATUS, "{\"device\":\"ESP32_AquaSentry\",\"status\":\"cancelled\"}");
   }
+
+  // Konsumsi antrean: Otomatis kembalikan sensor ke kondisi baseline HIJAU (Normal Low Risk)
+  overrideSensorActive = true;
+  simTdsPpm = 85.0f;
+  simTurbNtu = 12.5f;
+  currentPresetName = "LOW";
 }
 
 void finishTestingSession() {
@@ -669,6 +685,13 @@ void finishTestingSession() {
     String tcpRes = "{\"is_testing\":false,\"completed\":true,\"test_id\":\"" + String(testIdStr) + "\",\"timestamp_esp\":\"" + String(timeStr) + "\",\"final_verdict\":\"" + finalVerdict + "\",\"avg_tds\":" + String(avgTds, 1) + ",\"avg_turbidity\":" + String(avgTurbidity, 1) + "}\n";
     client.print(tcpRes);
   }
+
+  // Konsumsi antrean: Otomatis kembalikan sensor ke kondisi baseline HIJAU (Normal Low Risk)
+  overrideSensorActive = true;
+  simTdsPpm = 85.0f;
+  simTurbNtu = 12.5f;
+  currentPresetName = "LOW";
+  Serial.println("[ANTREAN] 1x Pengujian selesai. Status sensor otomatis kembali ke HIJAU (Low Risk).");
 }
 
 // =============================================================================

@@ -35,9 +35,10 @@ def on_connect(c, userdata, flags, rc, properties=None):
         logger.error(f"[MQTT] Gagal konek ke HiveMQ Cloud, kode RC={rc}")
         print(f"[!] Gagal konek ke MQTT HiveMQ, RC={rc}", flush=True)
 
-def on_disconnect(c, userdata, rc, properties=None):
+def on_disconnect(*args, **kwargs):
     global is_mqtt_connected
     is_mqtt_connected = False
+    rc = args[2] if len(args) > 2 else kwargs.get("rc", "unknown")
     logger.warning(f"[MQTT] Terputus dari HiveMQ Cloud, RC={rc}")
     print(f"[MQTT] Terputus dari HiveMQ Cloud, RC={rc}. Paho auto-reconnect aktif...", flush=True)
 
