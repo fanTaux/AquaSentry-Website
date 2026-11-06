@@ -162,15 +162,41 @@ export default function LocationMap() {
         );
     }, [latestReading, selectedSite]);
 
-    // Handle HTML5 Geolocation Detection (GPS / Hotspot HP)
+    // Handle Multi-Tier Geolocation Detection (Browser GPS + IP Hotspot Fallback)
     const handleDetectCurrentLocation = () => {
+        setIsDetectingGps(true);
+        setGpsStatusMessage('Mendeteksi koordinat lokasi dari GPS / Hotspot...');
+
+        const tryIpFallback = async () => {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.latitude && data.longitude) {
+                        const lat = parseFloat(data.latitude.toFixed(4));
+                        const lng = parseFloat(data.longitude.toFixed(4));
+                        const city = data.city || data.region || 'Hotspot HP';
+                        setNewSiteLat(lat);
+                        setNewSiteLng(lng);
+                        setIsDetectingGps(false);
+                        setGpsStatusMessage(`Lokasi terdeteksi via Jaringan/Hotspot (${city}): Lat ${lat}, Lng ${lng}.`);
+                        if (!newSiteName) {
+                            setNewSiteName(`Titik Sampel ${city} (${lat}, ${lng})`);
+                        }
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('IP fallback failed:', err);
+            }
+            setIsDetectingGps(false);
+            setGpsStatusMessage('Sinyal GPS laptop tidak tersedia. Silakan geser pin pada peta mini.');
+        };
+
         if (!navigator.geolocation) {
-            setGpsStatusMessage('Browser Anda tidak mendukung Geolocation API.');
+            tryIpFallback();
             return;
         }
-
-        setIsDetectingGps(true);
-        setGpsStatusMessage('Mendeteksi koordinat lokasi dari GPS/Hotspot HP...');
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -181,19 +207,17 @@ export default function LocationMap() {
                 setNewSiteLat(lat);
                 setNewSiteLng(lng);
                 setIsDetectingGps(false);
-                setGpsStatusMessage(`Lokasi terdeteksi dari Hotspot HP: Lat ${lat}, Lng ${lng} (Akurasi ~${acc}m).`);
+                setGpsStatusMessage(`Lokasi terdeteksi dari GPS: Lat ${lat}, Lng ${lng} (Akurasi ~${acc}m).`);
 
                 if (!newSiteName) {
-                    setNewSiteName(`Titik Jelajah GenZ (${lat}, ${lng})`);
+                    setNewSiteName(`Titik Sampel (${lat}, ${lng})`);
                 }
             },
             (error) => {
-                setIsDetectingGps(false);
-                setNewSiteLat(-7.9525);
-                setNewSiteLng(112.6145);
-                setGpsStatusMessage('Tidak dapat mengakses GPS (Menggunakan lokasi estimasi Malang).');
+                console.warn('Browser GPS error, mencoba deteksi lokasi via IP/Hotspot:', error.message);
+                tryIpFallback();
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
         );
     };
 
@@ -379,8 +403,8 @@ export default function LocationMap() {
     const filteredSites = sites.filter(s => {
         if (riskFilter === 'all') return true;
         if (riskFilter === 'low') return s.riskLevel === 'low';
-        if (riskFilter === 'moderate') return s.riskLevel === 'moderate' || s.riskLevel === 'high';
-        if (riskFilter === 'veryhigh') return s.riskLevel === 'veryhigh';
+        if (riskFilter === 'moderate') return s.riskLevel === 'moderate' || s.riskLevel === 'medium';
+        if (riskFilter === 'veryhigh') return s.riskLevel === 'high' || s.riskLevel === 'veryhigh';
         return true;
     });
 

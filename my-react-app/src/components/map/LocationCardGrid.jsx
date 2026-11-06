@@ -43,7 +43,7 @@ export default function LocationCardGrid({ sites, filteredSites, selectedSite, o
             badgeBg: 'bg-amber-500',
             borderBg: 'border-amber-200 bg-amber-50/40',
             textColor: 'text-amber-700',
-            sites: filteredSites.filter(s => s.riskLevel === 'moderate' || s.riskLevel === 'high')
+            sites: filteredSites.filter(s => s.riskLevel === 'moderate' || s.riskLevel === 'medium')
         },
         {
             key: 'veryhigh',
@@ -51,7 +51,7 @@ export default function LocationCardGrid({ sites, filteredSites, selectedSite, o
             badgeBg: 'bg-rose-500',
             borderBg: 'border-rose-200 bg-rose-50/40',
             textColor: 'text-rose-700',
-            sites: filteredSites.filter(s => s.riskLevel === 'veryhigh')
+            sites: filteredSites.filter(s => s.riskLevel === 'high' || s.riskLevel === 'veryhigh')
         }
     ];
 

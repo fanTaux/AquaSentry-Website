@@ -4,11 +4,11 @@ import L from 'leaflet';
 export const getBadgeStyle = (level) => {
     switch (level) {
         case 'veryhigh':
-            return { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', label: 'Bahaya', pulse: 'bg-rose-400', hexColor: '#ef4444' };
         case 'high':
-            return { bg: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-500', label: 'Tinggi', pulse: 'bg-amber-400', hexColor: '#f97316' };
+            return { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', label: 'Bahaya', pulse: 'bg-rose-400', hexColor: '#ef4444' };
         case 'moderate':
-            return { bg: 'bg-yellow-500', text: 'text-yellow-600', border: 'border-yellow-500', label: 'Sedang', pulse: 'bg-yellow-400', hexColor: '#eab308' };
+        case 'medium':
+            return { bg: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-500', label: 'Sedang', pulse: 'bg-amber-400', hexColor: '#f59e0b' };
         default:
             return { bg: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-500', label: 'Aman', pulse: 'bg-emerald-400', hexColor: '#10b981' };
     }
@@ -58,8 +58,8 @@ export default function MapCanvas({ sites, riskFilter, selectedSite, onSelectSit
         const filteredSites = sites.filter(s => {
             if (riskFilter === 'all') return true;
             if (riskFilter === 'low') return s.riskLevel === 'low';
-            if (riskFilter === 'moderate') return s.riskLevel === 'moderate' || s.riskLevel === 'high';
-            if (riskFilter === 'veryhigh') return s.riskLevel === 'veryhigh';
+            if (riskFilter === 'moderate') return s.riskLevel === 'moderate' || s.riskLevel === 'medium';
+            if (riskFilter === 'veryhigh') return s.riskLevel === 'high' || s.riskLevel === 'veryhigh';
             return true;
         });
 

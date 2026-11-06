@@ -19,8 +19,8 @@ export default function LocationFilterBar({ sites, riskFilter, setRiskFilter, co
                 >
                     <option value="all">Semua Status ({sites.length})</option>
                     <option value="low">Air Aman / Low Risk ({sites.filter(s => s.riskLevel === 'low').length})</option>
-                    <option value="moderate">Perlu Waspada / Medium ({sites.filter(s => s.riskLevel === 'moderate' || s.riskLevel === 'high').length})</option>
-                    <option value="veryhigh">Risiko Bahaya / High ({sites.filter(s => s.riskLevel === 'veryhigh').length})</option>
+                    <option value="moderate">Perlu Waspada / Medium ({sites.filter(s => s.riskLevel === 'moderate' || s.riskLevel === 'medium').length})</option>
+                    <option value="veryhigh">Risiko Bahaya / High ({sites.filter(s => s.riskLevel === 'high' || s.riskLevel === 'veryhigh').length})</option>
                 </select>
             </div>
         </div>
