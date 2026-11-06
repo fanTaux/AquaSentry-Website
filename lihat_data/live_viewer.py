@@ -11,6 +11,13 @@ import json
 import ssl
 import threading
 
+# Mendukung deteksi tombol seketika tanpa perlu Enter di Windows
+try:
+    import msvcrt
+    HAS_MSVCRT = True
+except ImportError:
+    HAS_MSVCRT = False
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
@@ -44,12 +51,13 @@ state = {
     "avg_turbidity": 12.5,
 }
 
-state_lock = threading.Lock()
+state_lock = threading.RLock()
 mqtt_client = None
 
 def on_connect(client, userdata, flags, rc, properties=None):
     with state_lock:
-        if rc == 0 or rc == "Success":
+        rc_code = getattr(rc, "value", rc)
+        if rc_code == 0 or str(rc) == "Success":
             state["connected_to_broker"] = True
             client.subscribe([
                 (TOPIC_TELEMETRY, 0),
@@ -96,14 +104,17 @@ def on_message(client, userdata, msg):
         pass
 
 def send_command(cmd: str):
-    if mqtt_client and state.get("connected_to_broker"):
-        mqtt_client.publish(TOPIC_COMMAND, cmd)
-        return True
+    try:
+        if mqtt_client and state.get("connected_to_broker"):
+            mqtt_client.publish(TOPIC_COMMAND, cmd, qos=0)
+            return True
+    except Exception:
+        pass
     return False
 
 def monitor_testing_session():
     """
-    Menunggu pengujian 30 detik selesai dengan tenang tanpa baris countdown.
+    Menunggu pengujian 30 detik selesai dengan tenang tanpa spam baris.
     """
     # Ambil tiket terdepan dari antrean (jika ada)
     active_item = None
@@ -117,9 +128,9 @@ def monitor_testing_session():
     if active_item:
         send_command(f"SET_PRESET:{active_item['preset']}")
 
-    print("\n" + "=" * 65)
-    print(" ⏳ Pengujian sedang berjalan...")
-    print("=" * 65)
+    print("\n" + "=" * 65, flush=True)
+    print(" ⏳ Pengujian sedang berjalan...", flush=True)
+    print("=" * 65, flush=True)
 
     while True:
         with state_lock:
@@ -140,10 +151,10 @@ def monitor_testing_session():
                 state["turbidity_ntu"] = 12.5
 
             send_command("SET_PRESET:LOW")
-            print("\n" + "=" * 65)
-            print(" [PENGUJIAN DIBATALKAN]")
-            print(" Status kembali ke normal.")
-            print("=" * 65 + "\n")
+            print("\n" + "=" * 65, flush=True)
+            print(" [PENGUJIAN DIBATALKAN]", flush=True)
+            print(" Status kembali ke normal.", flush=True)
+            print("=" * 65 + "\n", flush=True)
             time.sleep(1.0)
             break
 
@@ -168,24 +179,31 @@ def monitor_testing_session():
             if verdict == "Medium":
                 kategori_str = "Kualitas Air Sedang"
             elif verdict == "High":
-                kategori_str = "Kekeruhan Tinggi"
+                kategori_str = "Kekeruhan Tinggi / Bahaya"
 
-            print("\n" + "=" * 65)
-            print(" [HASIL PENGUJIAN SELESAI]")
-            print(f" Status : {kategori_str}")
-            print(f" TDS    : {avg_tds:.1f} PPM")
-            print(f" Turb   : {avg_turb:.1f} NTU")
-            print("=" * 65)
+            print("\n" + "=" * 65, flush=True)
+            print(" [HASIL PENGUJIAN SELESAI]", flush=True)
+            print(f" Status : {kategori_str}", flush=True)
+            print(f" TDS    : {avg_tds:.1f} PPM", flush=True)
+            print(f" Turb   : {avg_turb:.1f} NTU", flush=True)
+            print("=" * 65, flush=True)
 
             if remaining_q == 0:
-                print(" >>> Antrean telah habis digunakan. Sistem kembali ke kondisi normal (Hijau terus).\n")
+                print(" >>> Antrean telah habis digunakan. Sistem kembali ke kondisi normal (Hijau terus).\n", flush=True)
             else:
-                print(f" >>> 1 Pengujian selesai. Sisa antrean berikutnya: {remaining_q} pengujian.\n")
+                print(f" >>> 1 Pengujian selesai. Sisa antrean berikutnya: {remaining_q} pengujian.\n", flush=True)
 
-            try:
-                input(" Tekan Enter untuk kembali ke Menu...")
-            except (EOFError, KeyboardInterrupt):
-                pass
+            # Kembali otomatis atau tekan tombol apa saja
+            print(" Tekan tombol apa saja untuk kembali ke Menu...", flush=True)
+            wait_start = time.time()
+            while time.time() - wait_start < 4.0:
+                if HAS_MSVCRT and msvcrt.kbhit():
+                    try:
+                        msvcrt.getch()
+                    except Exception:
+                        pass
+                    break
+                time.sleep(0.1)
             break
 
         time.sleep(0.3)
@@ -198,26 +216,26 @@ def check_queue_status_action():
         q_list = list(state["queue"])
         history = list(state["history_completed"])
 
-    print("\n" + "=" * 65)
-    print("                 📋 STATUS ANTREAN SAAT INI")
-    print("=" * 65)
+    print("\n" + "=" * 65, flush=True)
+    print("                 📋 STATUS ANTREAN SAAT INI", flush=True)
+    print("=" * 65, flush=True)
 
     if q_list:
-        print(f" Status: Ada {len(q_list)} pengujian dalam antrean (MASIH BERLAKU):\n")
+        print(f" Status: Ada {len(q_list)} pengujian dalam antrean (MASIH BERLAKU):\n", flush=True)
         for idx, item in enumerate(q_list, start=1):
             tag = "  --> [AKAN DIUJI BERIKUTNYA]" if idx == 1 else ""
-            print(f"   {idx}. Pilihan [{item['id']}] {item['name']}{tag}")
-        print("\n Keterangan : Tekan tombol fisik D32 di ESP32 untuk memproses.")
-        print("              Pengujian akan mengeksekusi antrean di atas secara berurutan.")
-        print("              Setelah antrean habis, otomatis kembali ke Hijau terus.")
+            print(f"   {idx}. Pilihan [{item['id']}] {item['name']}{tag}", flush=True)
+        print("\n Keterangan : Tekan tombol fisik D32 di ESP32 untuk memproses.", flush=True)
+        print("              Pengujian akan mengeksekusi antrean di atas satu per satu.", flush=True)
+        print("              Setelah antrean habis, otomatis kembali ke Hijau terus.", flush=True)
     else:
-        print(" Status: Antrean saat ini KOSONG.")
+        print(" Status: Antrean saat ini KOSONG.", flush=True)
         if history:
             last = history[-1]
-            print(f" Catatan: Pengujian terakhir [{last['id']}] {last['name']} sudah selesai diproses.")
-        print(" Keterangan: Sistem berjalan normal (Lihat TDS / Hijau terus).")
+            print(f" Catatan: Pengujian terakhir [{last['id']}] {last['name']} sudah selesai diproses.", flush=True)
+        print(" Keterangan: Sistem berjalan normal (Lihat TDS / Hijau terus).", flush=True)
 
-    print("=" * 65 + "\n")
+    print("=" * 65 + "\n", flush=True)
 
 def add_to_queue(choice_id):
     """Menambahkan pilihan 1, 2, atau 3 ke antrean."""
@@ -229,7 +247,7 @@ def add_to_queue(choice_id):
             state["tds_ppm"] = 85.0
             state["turbidity_ntu"] = 12.5
         send_command("SET_PRESET:LOW")
-        print("\n >>> [✓ MASUK ANTREAN] Pilihan [1] Lihat TDS berhasil ditambahkan ke antrean.")
+        print("\n >>> [✓ MASUK ANTREAN] Pilihan [1] Lihat TDS berhasil ditambahkan.", flush=True)
 
     elif choice_id == "2":
         item = {"id": "2", "name": "Lihat Turbidity", "preset": "MEDIUM"}
@@ -239,7 +257,7 @@ def add_to_queue(choice_id):
             state["tds_ppm"] = 245.0
             state["turbidity_ntu"] = 215.0
         send_command("SET_PRESET:MEDIUM")
-        print("\n >>> [✓ MASUK ANTREAN] Pilihan [2] Lihat Turbidity berhasil ditambahkan ke antrean.")
+        print("\n >>> [✓ MASUK ANTREAN] Pilihan [2] Lihat Turbidity berhasil ditambahkan.", flush=True)
 
     elif choice_id == "3":
         item = {"id": "3", "name": "Cek Keseluruhan", "preset": "HIGH"}
@@ -249,11 +267,11 @@ def add_to_queue(choice_id):
             state["tds_ppm"] = 480.0
             state["turbidity_ntu"] = 450.0
         send_command("SET_PRESET:HIGH")
-        print("\n >>> [✓ MASUK ANTREAN] Pilihan [3] Cek Keseluruhan berhasil ditambahkan ke antrean.")
+        print("\n >>> [✓ MASUK ANTREAN] Pilihan [3] Cek Keseluruhan berhasil ditambahkan.", flush=True)
 
     with state_lock:
         total = len(state["queue"])
-    print(f" >>> Total dalam antrean sekarang: {total} pengujian (Ketik [4] untuk cek detail antrean).\n")
+    print(f" >>> Total dalam antrean sekarang: {total} pengujian (Ketik [4] untuk cek antrean).\n", flush=True)
 
 def clear_queue_action():
     """Mengosongkan antrean seketika."""
@@ -263,15 +281,65 @@ def clear_queue_action():
         state["tds_ppm"] = 85.0
         state["turbidity_ntu"] = 12.5
     send_command("SET_PRESET:LOW")
-    print("\n >>> [✓ ANTREAN DIKOSONGKAN] Semua antrean dibersihkan.")
-    print(" >>> Sistem kembali ke kondisi normal (Lihat TDS / Hijau terus).\n")
+    print("\n >>> [✓ ANTREAN DIKOSONGKAN] Semua antrean dibersihkan.", flush=True)
+    print(" >>> Sistem kembali ke kondisi normal (Lihat TDS / Hijau terus).\n", flush=True)
+
+def get_nonblocking_choice():
+    """
+    Membaca input keyboard pengguna secara instan tanpa membuat terminal macet (nyantol).
+    Di Windows, menekan tombol 1/2/3/4/C/Q langsung diproses seketika tanpa harus tekan Enter.
+    """
+    print(" Masukkan pilihan (1/2/3/4/C/Q): ", end="", flush=True)
+
+    if not HAS_MSVCRT:
+        # Fallback jika di luar Windows
+        try:
+            return input().strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            return "q"
+
+    # Windows non-blocking input loop
+    buffer = ""
+    while True:
+        # Cek apakah pengujian mendadak mulai (misal ditekan dari tombol fisik D32 ESP32)
+        with state_lock:
+            if state["is_testing"] or state["test_just_started"]:
+                print("", flush=True)
+                return "__TEST_STARTED__"
+
+        if msvcrt.kbhit():
+            try:
+                ch = msvcrt.getwch()
+            except Exception:
+                ch = ""
+
+            if ch in ('\r', '\n'):
+                # Pengguna menekan Enter
+                print("", flush=True)
+                return buffer.strip().lower()
+            elif ch == '\x03':  # Ctrl+C
+                print("\n", flush=True)
+                return "q"
+            elif ch in ('\b', '\x08'):  # Backspace
+                if len(buffer) > 0:
+                    buffer = buffer[:-1]
+                    print('\b \b', end='', flush=True)
+            elif ch.lower() in ('1', '2', '3', '4', 'c', 'q', 's'):
+                # PROSES INSTAN! Langsung respon tanpa perlu Enter!
+                print(ch, flush=True)
+                return ch.lower()
+            elif ch.isprintable():
+                buffer += ch
+                print(ch, end='', flush=True)
+
+        time.sleep(0.05)
 
 def main():
     global mqtt_client
 
-    print("=" * 65)
-    print("                           AQUASENTRY")
-    print("=" * 65)
+    print("=" * 65, flush=True)
+    print("                           AQUASENTRY", flush=True)
+    print("=" * 65, flush=True)
 
     client_id = f"AquaSentry_LiveViewer_{int(time.time())}"
     try:
@@ -286,7 +354,7 @@ def main():
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
 
-    print("[+] Menghubungkan ke sistem...")
+    print("[+] Menghubungkan ke sistem...", flush=True)
     for attempt in range(1, 6):
         try:
             mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
@@ -294,11 +362,11 @@ def main():
             break
         except Exception as e:
             if attempt < 5:
-                print(f" [.] Menunggu koneksi internet/DNS (percobaan {attempt}/5)...")
+                print(f" [.] Menunggu koneksi internet/DNS (percobaan {attempt}/5)...", flush=True)
                 time.sleep(2)
             else:
-                print(f"\n[!] Gagal terhubung: {e}")
-                print(" [!] Pastikan laptop terhubung ke Wi-Fi dengan koneksi internet aktif.")
+                print(f"\n[!] Gagal terhubung: {e}", flush=True)
+                print(" [!] Pastikan laptop terhubung ke Wi-Fi dengan koneksi internet aktif.", flush=True)
                 return
 
     # Tunggu koneksi broker awal
@@ -308,7 +376,7 @@ def main():
         time.sleep(0.1)
 
     if not state["connected_to_broker"]:
-        print("[!] Gagal tersambung ke broker. Periksa koneksi internet.")
+        print("[!] Gagal tersambung ke broker. Periksa koneksi internet.", flush=True)
         return
 
     # Cek sinyal ESP32
@@ -331,71 +399,58 @@ def main():
 
             status_str = "Terhubung" if is_online else "Tidak Terhubung"
 
-            print("\n" + "=" * 65)
-            print("                           AQUASENTRY")
-            print("=" * 65)
-            print(f" Status Perangkat: {status_str}")
-            print("-" * 65)
-            print(" [1] Lihat TDS")
-            print(" [2] Lihat Turbidity")
-            print(" [3] Cek Keseluruhan")
-            print(" [4] Cek Status Antrean")
-            print(" [C] Kosongkan Antrean")
-            print(" [Q] Keluar")
-            print("=" * 65)
+            print("\n" + "=" * 65, flush=True)
+            print("                           AQUASENTRY", flush=True)
+            print("=" * 65, flush=True)
+            print(f" Status Perangkat: {status_str}", flush=True)
+            print("-" * 65, flush=True)
+            print(" [1] Lihat TDS", flush=True)
+            print(" [2] Lihat Turbidity", flush=True)
+            print(" [3] Cek Keseluruhan", flush=True)
+            print(" [4] Cek Status Antrean", flush=True)
+            print(" [C] Kosongkan Antrean", flush=True)
+            print(" [Q] Keluar", flush=True)
+            print("=" * 65, flush=True)
 
             try:
-                pilihan_raw = input(" Masukkan pilihan (1/2/3/4/C/Q): ").strip().lower()
+                cmd = get_nonblocking_choice()
             except (EOFError, KeyboardInterrupt):
-                print("\n\n[✓] Program dihentikan.")
+                print("\n\n[✓] Program dihentikan.", flush=True)
                 break
 
-            # Jika pengujian mendadak mulai tepat saat user menginput
-            with state_lock:
-                if state["is_testing"] or state["test_just_started"]:
-                    monitor_testing_session()
-                    continue
-
-            # Pisahkan input jika user mengetik kombinasi (misal: "1 2" atau "2 3")
-            tokens = pilihan_raw.replace(",", " ").split()
-            if not tokens:
+            if cmd == "__TEST_STARTED__":
+                monitor_testing_session()
                 continue
 
-            # Jika input berisi perintah kontrol khusus
-            if len(tokens) == 1:
-                cmd = tokens[0]
-                if cmd == "4":
-                    check_queue_status_action()
-                    continue
-                elif cmd == "c":
-                    clear_queue_action()
-                    continue
-                elif cmd == "s":
-                    send_command("START_TEST")
-                    time.sleep(0.5)
-                    monitor_testing_session()
-                    continue
-                elif cmd == "q":
-                    print("\n[✓] Keluar dari Menu.")
-                    break
+            if not cmd:
+                continue
 
-            # Proses setiap angka pilihan (1, 2, atau 3) yang dimasukkan user
-            valid_found = False
-            for token in tokens:
-                if token in ["1", "2", "3"]:
-                    add_to_queue(token)
-                    valid_found = True
-
-            if not valid_found and len(tokens) == 1 and tokens[0] not in ["4", "c", "s", "q"]:
-                print(" [!] Pilihan tidak dikenali. Silakan pilih 1, 2, 3, 4, C, atau Q.")
+            if cmd == "4":
+                check_queue_status_action()
+            elif cmd == "c":
+                clear_queue_action()
+            elif cmd == "s":
+                send_command("START_TEST")
+                time.sleep(0.5)
+                monitor_testing_session()
+            elif cmd == "q":
+                print("\n[✓] Keluar dari Menu.", flush=True)
+                break
+            elif cmd in ["1", "2", "3"]:
+                add_to_queue(cmd)
+            else:
+                print(" [!] Pilihan tidak dikenali. Silakan pilih 1, 2, 3, 4, C, atau Q.", flush=True)
 
             time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\n\n[✓] Program dihentikan.")
+        print("\n\n[✓] Program dihentikan.", flush=True)
     finally:
-        mqtt_client.loop_stop()
-        mqtt_client.disconnect()
+        try:
+            mqtt_client.loop_stop()
+            mqtt_client.disconnect()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
